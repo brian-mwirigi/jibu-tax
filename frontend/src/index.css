@@ -1,0 +1,11 @@
+/**
+ * File: frontend/src/index.css
+ * Description:
+ *   Global Stylesheet with Tailwind Directives.
+ *   - Injects Tailwind base, components, and utilities layers.
+ *   - Contains custom animations and layout utility classes for receipts and voice waves.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

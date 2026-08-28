@@ -1,0 +1,53 @@
+# File: render.yaml
+# Description:
+#   Render 1-Click Deployment Blueprint.
+#   - Deploys JibuTax FastAPI backend as a managed Web Service.
+#   - Deploys Managed PostgreSQL database instance.
+#   - Deploys React Static Site frontend.
+
+services:
+  - type: web
+    name: jibutax-backend
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: '["https://jibutax.onrender.com","http://localhost:5173"]'
+
+  - type: web
+    name: jibutax-frontend
+    runtime: static
+    region: frankfurt
+    plan: starter
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: jibutax-backend
+          property: host
+
+databases:
+  - name: jibutax-db
+    region: frankfurt
+    plan: starter
+    databaseName: jibutax_db
+    user: jibutax

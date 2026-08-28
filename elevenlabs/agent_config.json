@@ -1,0 +1,12 @@
+{
+  "name": "JibuTax eTIMS Voice Assistant",
+  "description": "ElevenLabs Conversational Agent configuration for JibuTax voice-first KRA compliance orchestrator.",
+  "metadata": {
+    "supported_languages": ["sw", "en", "sheng"],
+    "tools": [
+      "validate_buyer_pin: Real-time KRA PIN lookup",
+      "calculate_tax: Deterministic VAT computation",
+      "file_etims_invoice: Official electronic invoice generation"
+    ]
+  }
+}

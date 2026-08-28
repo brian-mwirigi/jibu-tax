@@ -1,0 +1,62 @@
+# File: docker-compose.yml
+# Description:
+#   Local Docker Compose Environment.
+#   - Orchestrates PostgreSQL database container on port 5432.
+#   - Runs FastAPI backend service connected to PostgreSQL.
+#   - Mounts frontend development environment on port 5173.
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jibutax-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jibutax
+      POSTGRES_PASSWORD: jibutax
+      POSTGRES_DB: jibutax_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jibutax -d jibutax_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jibutax-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://jibutax:jibutax@postgres:5432/jibutax_db
+      - ENVIRONMENT=development
+      - PORT=8000
+      - HOST=0.0.0.0
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jibutax-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
