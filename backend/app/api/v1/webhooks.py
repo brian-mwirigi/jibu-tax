@@ -33,10 +33,7 @@ async def validate_buyer(
     raw_body = await request.body()
     settings = get_settings()
 
-    secret = (
-        settings.webhook_secret
-        .get_secret_value()
-    )
+    secret = settings.webhook_secret
 
     if not verify_signature(
         raw_body=raw_body,
