@@ -1,9 +1,7 @@
-"""
-File: backend/app/models/__init__.py
-Description:
-    Database Models Module.
-    Exports ORM models:
-    - Taxpayer: KRA PIN registry records.
-    - Invoice & InvoiceItem: eTIMS fiscal electronic invoices and line items.
-    - CallSession: Voice call transcripts and agent execution logs.
-"""
+"""ORM models."""
+
+from app.models.call_session import CallSession
+from app.models.invoice import Invoice, InvoiceItem
+from app.models.taxpayer import Taxpayer
+
+__all__ = ["CallSession", "Invoice", "InvoiceItem", "Taxpayer"]

@@ -25,6 +25,14 @@ services:
           property: connectionString
       - key: CORS_ORIGINS
         value: '["https://jibutax.onrender.com","http://localhost:5173"]'
+      - key: WHATSAPP_PROVIDER
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_META_TOKEN
+        sync: false
+      - key: WHATSAPP_META_PHONE_NUMBER_ID
+        sync: false
 
   - type: web
     name: jibutax-frontend

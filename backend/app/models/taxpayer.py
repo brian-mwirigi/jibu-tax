@@ -1,14 +1,21 @@
-"""
-File: backend/app/models/taxpayer.py
-Description:
-    Taxpayer Database Model (KRA Registry).
-    - Table for storing verified taxpayer PINs and legal business names.
-    - Fields include:
-        * pin: Unique alphanumeric KRA PIN (Primary Key).
-        * legal_name: Official registered business or individual name.
-        * trading_name: Trade name / DBA.
-        * status: Status with KRA (ACTIVE, SUSPENDED, CANCELLED).
-        * taxpayer_type: INDIVIDUAL, COMPANY, or PARASTOTAL.
-        * vat_registered: Boolean indicating if entity is registered for VAT.
-        * etims_onboarded: Boolean indicating eTIMS compliance status.
-"""
+"""KRA taxpayer registry row (used by PIN checks and invoice seller/buyer lookup)."""
+
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+class Taxpayer(Base):
+    __tablename__ = "taxpayers"
+
+    pin: Mapped[str] = mapped_column(String(11), primary_key=True)
+    legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    trading_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+    taxpayer_type: Mapped[str] = mapped_column(String(32), nullable=False, default="INDIVIDUAL")
+    vat_registered: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    etims_onboarded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

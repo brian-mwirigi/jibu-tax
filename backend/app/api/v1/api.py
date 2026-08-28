@@ -1,10 +1,9 @@
-"""
-File: backend/app/api/v1/api.py
-Description:
-    API Version 1 Router Aggregator.
-    - Aggregates sub-routers into a single APIRouter instance:
-        * /kra: KRA PIN verification endpoints.
-        * /invoices: eTIMS electronic invoice management endpoints.
-        * /tools: ElevenLabs conversational voice agent webhook endpoints.
-        * /stats: Dashboard analytics & compliance metrics endpoints.
-"""
+"""Version 1 router. Other roles mount their routes here later."""
+
+from fastapi import APIRouter
+
+from app.api.v1 import invoices, whatsapp
+
+api_router = APIRouter()
+api_router.include_router(invoices.router, prefix="/invoices", tags=["invoices"])
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["whatsapp"])

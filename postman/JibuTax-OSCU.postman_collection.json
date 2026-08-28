@@ -1,0 +1,588 @@
+{
+  "info": {
+    "_postman_id": "a7c3e1d0-9b24-4f11-8c6a-jibutax-oscu-01",
+    "name": "JibuTax OSCU (Role 3)",
+    "description": "Cryptographic eTIMS simulator + SMS/WhatsApp QR dispatcher.\n\nStart the API first (SMS and WhatsApp stay mocked until you add keys):\n\n  cd backend\n  ../.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000\n\nThen run folder 2 (File invoices) before folder 3 (Lookup). Filing Safari Builders saves invoice_number and control_code for the later GETs.\n\nExpected cement totals: taxable 200000, VAT 32000, grand 232000. sms_status and whatsapp_status should be \"mocked\".",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "invoice_number", "value": "" },
+    { "key": "control_code", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health",
+      "item": [
+        {
+          "name": "GET health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('API is up', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().ok).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Tax preview (no SMS, no seal)",
+      "item": [
+        {
+          "name": "Preview cement 16% (happy path)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('16% VAT on 200000 = 32000, grand 232000', function () {",
+                  "  pm.expect(Number(json.total_standard_amount)).to.eql(200000);",
+                  "  pm.expect(Number(json.total_standard_vat)).to.eql(32000);",
+                  "  pm.expect(Number(json.grand_total)).to.eql(232000);",
+                  "  pm.expect(json.lines[0].tax_class).to.eql('STANDARD_16');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 100,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        },
+        {
+          "name": "Preview diesel 8%",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('fuel 8%', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.lines[0].tax_class).to.eql('FUEL_8');",
+                  "  pm.expect(Number(json.total_fuel_tax)).to.eql(800);",
+                  "  pm.expect(Number(json.grand_total)).to.eql(10800);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"diesel litres\",\n      \"quantity\": 50,\n      \"unit_price\": 200\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        },
+        {
+          "name": "Preview maize exempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('exempt, VAT 0', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.lines[0].tax_class).to.eql('EXEMPT');",
+                  "  pm.expect(Number(json.total_vat_amount)).to.eql(0);",
+                  "  pm.expect(Number(json.grand_total)).to.eql(40000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"maize 90kg bags\",\n      \"quantity\": 10,\n      \"unit_price\": 4000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        },
+        {
+          "name": "Preview fertilizer zero-rated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('zero-rated', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.lines[0].tax_class).to.eql('ZERO_RATED');",
+                  "  pm.expect(Number(json.grand_total)).to.eql(12500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"NPK fertilizer\",\n      \"quantity\": 5,\n      \"unit_price\": 2500\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        },
+        {
+          "name": "Preview mixed invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('mixed totals', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(Number(json.total_standard_vat)).to.eql(1600);",
+                  "  pm.expect(Number(json.grand_total)).to.eql(15600);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"description\": \"cement bags\", \"quantity\": 10, \"unit_price\": 1000 },\n    { \"description\": \"fresh milk\", \"quantity\": 20, \"unit_price\": 50 },\n    { \"description\": \"fertilizer\", \"quantity\": 2, \"unit_price\": 1500 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. File invoices (seal + mocked SMS)",
+      "item": [
+        {
+          "name": "File Safari Builders cement (demo sale)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('filed 200', () => pm.response.to.have.status(200));",
+                  "pm.test('totals + mocked SMS + WhatsApp', function () {",
+                  "  pm.expect(Number(json.grand_total)).to.eql(232000);",
+                  "  pm.expect(json.sms_status).to.eql('mocked');",
+                  "  pm.expect(json.sms_destination).to.eql('+254712345678');",
+                  "  pm.expect(json.whatsapp_status).to.eql('mocked');",
+                  "  pm.expect(json.whatsapp_destination).to.eql('+254712345678');",
+                  "  pm.expect(json.oscu_control_code).to.match(/^[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/);",
+                  "  pm.expect(json.qr_code_base64).to.be.a('string').and.not.empty;",
+                  "  pm.expect(json.signature_valid).to.eql(true);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('invoice_number', json.invoice_number);",
+                  "  pm.collectionVariables.set('control_code', json.oscu_control_code);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trader_pin\": \"A012345678W\",\n  \"trader_name\": \"JibuTax Demo Trader\",\n  \"trader_phone\": \"0712345678\",\n  \"buyer_pin\": \"P051234567M\",\n  \"buyer_name\": \"Safari Builders\",\n  \"send_sms\": true,\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 100,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "File walk-in (no buyer PIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('walk-in', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.buyer_pin).to.eql(null);",
+                  "  pm.expect(json.buyer_name).to.eql('WALK-IN CUSTOMER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trader_phone\": \"0712345678\",\n  \"send_sms\": true,\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 2,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "File with SMS skipped (send_sms false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sms skipped', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().sms_status).to.eql('skipped');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trader_phone\": \"0712345678\",\n  \"buyer_name\": \"No SMS Buyer\",\n  \"send_sms\": false,\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 1,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "File with bad phone (invoice still saved)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('filed but SMS skipped', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.invoice_number).to.match(/^INV-/);",
+                  "  pm.expect(json.sms_status).to.eql('skipped_invalid_phone');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trader_phone\": \"not-a-phone\",\n  \"buyer_name\": \"Bad Phone Buyer\",\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 1,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Lookup and verify",
+      "item": [
+        {
+          "name": "List invoices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('list', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "Get invoice by number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('fetched', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().invoice_number).to.eql(pm.collectionVariables.get('invoice_number'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/{{invoice_number}}"
+          }
+        },
+        {
+          "name": "Verify control code (should be valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('signature valid', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(json.valid).to.eql(true);",
+                  "  pm.expect(json.invoice.oscu_control_code).to.eql(pm.collectionVariables.get('control_code'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/verify/{{control_code}}"
+          }
+        },
+        {
+          "name": "Download QR PNG",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PNG receipt QR', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('image/png');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/{{invoice_number}}/qr.png"
+          }
+        },
+        {
+          "name": "Resend WhatsApp QR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('whatsapp resend', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().whatsapp_status).to.be.oneOf(['mocked', 'sent', 'skipped_not_configured', 'skipped_public_url_required', 'failed']);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/{{invoice_number}}/whatsapp"
+          }
+        },
+        {
+          "name": "Verify unknown control code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('not found, valid false', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().valid).to.eql(false);",
+                  "  pm.expect(pm.response.json().invoice).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/verify/DEAD-BEEF-0000-0000"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Expected failures",
+      "item": [
+        {
+          "name": "Reject math mismatch (claimed line total)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test('400 MATH_MISMATCH', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(json.detail.code).to.eql('MATH_MISMATCH');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 100,\n      \"unit_price\": 2000,\n      \"claimed_line_total\": 150000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices/preview"
+          }
+        },
+        {
+          "name": "Reject claimed grand total mismatch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 MATH_MISMATCH', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().detail.code).to.eql('MATH_MISMATCH');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"claimed_grand_total\": 200000,\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 100,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "Reject invalid buyer PIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 INVALID_PIN', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().detail.code).to.eql('INVALID_PIN');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyer_pin\": \"12345\",\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 1,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "Reject buyer PIN = trader PIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 SAME_PARTY', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().detail.code).to.eql('SAME_PARTY');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trader_pin\": \"A012345678W\",\n  \"buyer_pin\": \"A012345678W\",\n  \"items\": [\n    {\n      \"description\": \"bags of cement\",\n      \"quantity\": 1,\n      \"unit_price\": 2000\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/invoices"
+          }
+        },
+        {
+          "name": "Missing invoice 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().detail.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/invoices/INV-2099-99999"
+          }
+        }
+      ]
+    }
+  ]
+}
