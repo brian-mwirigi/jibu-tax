@@ -13,6 +13,10 @@ from app.database import init_db
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     yield
 
 
@@ -22,6 +26,20 @@ app = FastAPI(
     title="JibuTax Voice-First eTIMS API",
     version="1.0.0",
     description="Voice-First eTIMS Orchestrator for Kenya KRA compliance.",
+    description=(
+        "Secure voice-first eTIMS orchestration "
+        "for Kenya KRA compliance."
+    ),
+    docs_url=(
+        "/docs"
+        if settings.environment != "production"
+        else None
+    ),
+    redoc_url=(
+        "/redoc"
+        if settings.environment != "production"
+        else None
+    ),
     lifespan=lifespan,
 )
 
@@ -31,11 +49,23 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Webhook-Signature",
+    ],
 )
 
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(
+    api_router,
+    prefix="/api/v1",
+)
+
 
 
 @app.get("/health", tags=["System"])
-def health_check():
+async def health_check() -> dict[str, str]:
     return {"status": "ok"}

@@ -6,6 +6,8 @@ Description:
     and Role 6 (WebSocket / Telemetry frontend) can run turns and inspect state.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
@@ -18,19 +20,23 @@ from app.database import engine
 from app.models.taxpayer import Taxpayer
 
 router = APIRouter(prefix="/agent", tags=["LangGraph Agent Brain"])
+logger = logging.getLogger(__name__)
 
 
 class AgentInvokeRequest(BaseModel):
     caller_phone: str = Field(
-        ...,
+        min_length=10,
+        max_length=20,
         description="Trader's phone number used as thread_id for state checkpointing (e.g. '+254712345678')"
     )
     transcript: str = Field(
-        ...,
+        min_length=1,
+        max_length=20000,
         description="Trader's spoken audio transcript from ElevenLabs"
     )
     language: Optional[str] = Field(
         default="sw",
+        pattern="^(sw|en|sheng)$",
         description="Detected language: 'sw' (Swahili), 'en' (English), or 'sheng'"
     )
 
@@ -123,10 +129,11 @@ def invoke_agent_turn(payload: AgentInvokeRequest):
             trader_name=identity.get("trader_name"),
             needs_trader_pin=False,
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("LangGraph agent invocation failed")
         raise HTTPException(
             status_code=500,
-            detail=f"LangGraph Agent invocation error: {str(e)}"
+            detail="Agent invocation failed",
         )
 
 
@@ -142,5 +149,9 @@ def get_agent_checkpoint_state(caller_phone: str):
         if not state_snapshot or not state_snapshot.values:
             return {"caller_phone": caller_phone, "state": None, "message": "No active session checkpoint."}
         return {"caller_phone": caller_phone, "state": state_snapshot.values}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to inspect checkpoint: {str(e)}")
+    except Exception:
+        logger.exception("Failed to inspect agent checkpoint")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to inspect checkpoint",
+        )
