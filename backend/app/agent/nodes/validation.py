@@ -63,16 +63,19 @@ def validate_pin_node(state: JibuTaxState) -> Dict[str, Any]:
 
     pin = (sale.buyer_pin or "").strip().upper()
 
-    # Case 1: Missing PIN
+    # Case 1: No Buyer PIN mentioned -> Standard Retail Consumer (B2C) Sale
     if not pin:
         return {
             "buyer_validation": BuyerValidationResult(
-                is_valid=False,
-                pin="",
-                error_message="PIN ya mnunuzi haikutajwa. Tafadhali taja KRA PIN ya mteja."
+                is_valid=True,
+                pin="CONSUMER_RETAIL",
+                legal_name="Mteja wa Kawaida (Retail Consumer)",
+                trading_name="Walk-in Consumer",
+                vat_registered=False,
+                etims_onboarded=False,
+                error_message=None,
             ),
-            "retry_count": current_retry + 1,
-            "call_status": "NEEDS_CLARIFICATION",
+            "call_status": "IN_PROGRESS",
         }
 
     # Case 2: Invalid PIN Syntax
