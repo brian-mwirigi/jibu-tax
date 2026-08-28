@@ -270,6 +270,20 @@ def test_fastapi_agent_endpoints(api_client):
     }
 
     response = api_client.post("/api/v1/agent/invoke", json=payload)
+    if response.status_code == 200 and response.json().get("needs_trader_pin"):
+        enroll = api_client.post(
+            "/api/v1/agent/invoke",
+            json={
+                "caller_phone": phone,
+                "transcript": "PIN yangu ni A012345678W",
+                "language": "sw",
+            },
+        )
+        assert enroll.status_code == 200, enroll.text
+        assert enroll.json()["needs_trader_pin"] is False
+        assert enroll.json()["trader_pin"] == "A012345678W"
+        response = api_client.post("/api/v1/agent/invoke", json=payload)
+
     assert response.status_code == 200, f"API failed: {response.text}"
 
     data = response.json()

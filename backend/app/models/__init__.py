@@ -1,9 +1,20 @@
-"""
-File: backend/app/models/__init__.py
-Description:
-    Database Models Module.
-    Exports ORM models:
-    - Taxpayer: KRA PIN registry records.
-    - Invoice & InvoiceItem: eTIMS fiscal electronic invoices and line items.
-    - CallSession: Voice call transcripts and agent execution logs.
-"""
+"""Database models package. Import side effects register tables on SQLModel.metadata."""
+
+from app.models.call_session import CallSession
+from app.models.invoice import Invoice, InvoiceItem
+from app.models.ledger import LedgerEntry
+from app.models.tax_return import FilingStatus, ReturnKind, TaxReturnFiling
+from app.models.taxpayer import Taxpayer, TaxpayerStatus, TaxpayerType
+
+__all__ = [
+    "CallSession",
+    "FilingStatus",
+    "Invoice",
+    "InvoiceItem",
+    "LedgerEntry",
+    "ReturnKind",
+    "TaxReturnFiling",
+    "Taxpayer",
+    "TaxpayerStatus",
+    "TaxpayerType",
+]

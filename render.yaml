@@ -1,9 +1,12 @@
 # File: render.yaml
 # Description:
 #   Render 1-Click Deployment Blueprint.
-#   - Deploys JibuTax FastAPI backend as a managed Web Service.
-#   - Deploys Managed PostgreSQL database instance.
-#   - Deploys React Static Site frontend.
+#   - FastAPI web service
+#   - Celery worker (async immutable ledger writes)
+#   - Cron on the 18th for TOT / NIL filing
+#   - Managed PostgreSQL 16
+#   - Redis (Celery broker)
+#   - React static site
 
 services:
   - type: web
@@ -23,8 +26,73 @@ services:
         fromDatabase:
           name: jibutax-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
       - key: CORS_ORIGINS
         value: '["https://jibutax.onrender.com","http://localhost:5173"]'
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+
+  - type: worker
+    name: jibutax-worker
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+
+  - type: cron
+    name: jibutax-month-end-filing
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    schedule: "0 6 18 * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.cron.month_end
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+
+  - type: redis
+    name: jibutax-redis
+    region: frankfurt
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
 
   - type: web
     name: jibutax-frontend
@@ -51,3 +119,4 @@ databases:
     plan: starter
     databaseName: jibutax_db
     user: jibutax
+    postgresMajorVersion: 16

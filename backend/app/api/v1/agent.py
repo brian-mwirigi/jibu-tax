@@ -9,8 +9,13 @@ Description:
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
+
+from sqlmodel import Session
+
 from app.agent.graph import jibutax_agent
 from app.agent.state import ExtractedSale, BuyerValidationResult, TaxBreakdown
+from app.database import engine
+from app.models.taxpayer import Taxpayer
 
 router = APIRouter(prefix="/agent", tags=["LangGraph Agent Brain"])
 
@@ -39,6 +44,9 @@ class AgentInvokeResponse(BaseModel):
     buyer_validation: Optional[BuyerValidationResult] = None
     tax_breakdown: Optional[TaxBreakdown] = None
     extraction_error: Optional[str] = None
+    trader_pin: Optional[str] = None
+    trader_name: Optional[str] = None
+    needs_trader_pin: bool = False
 
 
 @router.post("/invoke", response_model=AgentInvokeResponse)
@@ -51,11 +59,42 @@ def invoke_agent_turn(payload: AgentInvokeRequest):
     4. Formulates Swahili/English verbal response for ElevenLabs text-to-speech.
     """
     thread_config = {"configurable": {"thread_id": payload.caller_phone}}
+    language = payload.language or "sw"
+
+    identity = {
+        "needs_trader_pin": False,
+        "just_enrolled": False,
+        "trader_pin": None,
+        "trader_name": None,
+        "spoken_prompt": None,
+    }
+    try:
+        with Session(engine) as session:
+            identity = Taxpayer.resolve_for_voice(
+                session,
+                phone=payload.caller_phone,
+                transcript=payload.transcript,
+                language=language,
+            )
+    except Exception:
+        identity = identity
+
+    if identity.get("needs_trader_pin"):
+        return AgentInvokeResponse(
+            caller_phone=Taxpayer.normalize_phone(payload.caller_phone) or payload.caller_phone,
+            call_status="NEEDS_TRADER_PIN",
+            ready_for_filing=False,
+            spoken_summary=identity.get("spoken_prompt") or Taxpayer.first_call_prompt(language),
+            needs_trader_pin=True,
+        )
 
     input_state = {
         "caller_phone": payload.caller_phone,
         "transcript": payload.transcript,
-        "language": payload.language or "sw",
+        "language": language,
+        "trader_pin": identity.get("trader_pin"),
+        "trader_name": identity.get("trader_name"),
+        "needs_trader_pin": False,
         "sale": None,
         "extraction_error": None,
         "buyer_validation": None,
@@ -68,15 +107,21 @@ def invoke_agent_turn(payload: AgentInvokeRequest):
 
     try:
         final_state = jibutax_agent.invoke(input_state, config=thread_config)
+        spoken = final_state.get("spoken_summary") or ""
+        if identity.get("just_enrolled") and identity.get("spoken_prompt"):
+            spoken = f"{identity['spoken_prompt']} {spoken}".strip()
         return AgentInvokeResponse(
             caller_phone=payload.caller_phone,
             call_status=final_state.get("call_status", "COMPLETED"),
             ready_for_filing=final_state.get("ready_for_filing", False),
-            spoken_summary=final_state.get("spoken_summary"),
+            spoken_summary=spoken or None,
             sale=final_state.get("sale"),
             buyer_validation=final_state.get("buyer_validation"),
             tax_breakdown=final_state.get("tax_breakdown"),
             extraction_error=final_state.get("extraction_error"),
+            trader_pin=identity.get("trader_pin"),
+            trader_name=identity.get("trader_name"),
+            needs_trader_pin=False,
         )
     except Exception as e:
         raise HTTPException(

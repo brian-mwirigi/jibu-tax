@@ -1,9 +1,61 @@
 """
-File: backend/app/config.py
-Description:
-    Application Configuration & Environment Variables.
-    - Loads environment settings using Pydantic BaseSettings.
-    - Manages PostgreSQL database connection strings.
-    - Stores KRA OSCU credentials and ElevenLabs webhook secrets.
-    - Configures CORS origins and SMS provider settings (Africa's Talking / Twilio).
+Application configuration loaded from the environment.
+
+Render injects DATABASE_URL from managed Postgres and REDIS_URL from Redis.
+KRA filing tokens stay in process env and are never passed to the LLM.
 """
+
+from functools import lru_cache
+from typing import List
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    ENVIRONMENT: str = "development"
+    PORT: int = 8000
+    HOST: str = "0.0.0.0"
+    CORS_ORIGINS: List[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"]
+    )
+
+    DATABASE_URL: str = "postgresql://jibutax:jibutax@localhost:5432/jibutax_db"
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+
+    GEMINI_API_KEY: str = ""
+    GOOGLE_API_KEY: str = ""
+
+    KRA_ENVIRONMENT: str = "sandbox"
+    KRA_BASE_URL: str = "https://sbx.kra.go.ke"
+    KRA_API_TOKEN: str = ""
+    KRA_TOT_PATH: str = "/filing/v1/tot/paymentregistration"
+    KRA_NIL_PATH: str = "/dtd/return/v1/nil"
+    KRA_OSCU_DEVICE_ID: str = "OSCU-KE-NBO-0042"
+
+    TOT_RATE: str = "0.015"
+    NIL_OBLIGATION_CODE: str = "7"
+
+    DEFAULT_TRADER_PIN: str = "A012345678W"
+    DEFAULT_TRADER_NAME: str = "JibuTax Demo Trader"
+
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_AGENT_ID: str = ""
+    WEBHOOK_SECRET: str = "jibutax_secret_token_2026"
+
+    SMS_PROVIDER: str = "mock"
+    AFRICASTALKING_USERNAME: str = ""
+    AFRICASTALKING_API_KEY: str = ""
+    AFRICASTALKING_SENDER_ID: str = ""
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
