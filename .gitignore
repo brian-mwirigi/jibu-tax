@@ -24,9 +24,16 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.hypothesis/
 .coverage
+.coverage.*
 htmlcov/
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -43,6 +50,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
 # IDE & OS
 .vscode/

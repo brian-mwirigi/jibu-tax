@@ -66,6 +66,9 @@ class JibuTaxState(TypedDict):
     caller_phone: str                      # Trader's MSISDN used as thread_id for checkpointing
     transcript: str                        # Raw voice transcript from ElevenLabs audio
     language: str                          # Detected speech language: 'sw' (Swahili), 'en', or 'sheng'
+    trader_pin: Optional[str]              # Seller KRA PIN linked to caller_phone after first call
+    trader_name: Optional[str]
+    needs_trader_pin: bool                 # True only on first call before PIN is stored
     
     # Node 1: Extraction Outputs (Claude 3.5 Sonnet)
     sale: Optional[ExtractedSale]
