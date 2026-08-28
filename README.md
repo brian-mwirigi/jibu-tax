@@ -15,6 +15,13 @@
 
 ---
 
+## 🌿 Team Collaboration & Git Workflow
+
+> **IMPORTANT:** Never commit or push directly to `main`.  
+> All work must be conducted on feature branches (e.g. `feat/role4-agent-routing`) and submitted via a Pull Request (PR) for review. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
 ## 📂 Project Template & File Structure
 
 ```
