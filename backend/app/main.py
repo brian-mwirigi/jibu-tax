@@ -24,8 +24,6 @@ settings = get_settings()
 
 app = FastAPI(
     title="JibuTax Voice-First eTIMS API",
-    version="1.0.0",
-    description="Voice-First eTIMS Orchestrator for Kenya KRA compliance.",
     description=(
         "Secure voice-first eTIMS orchestration "
         "for Kenya KRA compliance."
@@ -45,18 +43,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS or ["*"],
+    allow_origins=settings.cors_origins if hasattr(settings, "cors_origins") and settings.cors_origins else (settings.CORS_ORIGINS if hasattr(settings, "CORS_ORIGINS") and settings.CORS_ORIGINS else ["*"]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_origins=settings.cors_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "X-Webhook-Signature",
-    ],
 )
 
 app.include_router(
