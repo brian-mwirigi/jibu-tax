@@ -13,11 +13,15 @@ from app.agent.state import JibuTaxState, ExtractedSale
 from app.agent.prompts import EXTRACTION_SYSTEM_PROMPT
 
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def get_llm():
     """Initializes Google Gemini model with zero temperature for deterministic parsing."""
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     return ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         google_api_key=api_key,
         temperature=0.0,
     )

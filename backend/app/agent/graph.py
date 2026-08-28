@@ -19,7 +19,6 @@ from app.agent.nodes import (
     clarify_pin_node,
 )
 
-
 def build_jibutax_graph(checkpointer=None):
     """
     Constructs and compiles the JibuTax StateGraph.
