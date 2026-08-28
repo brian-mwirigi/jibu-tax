@@ -143,12 +143,12 @@ def test_standard_rated_cement_16_percent_vat(agent_graph):
 
 
 # ---------------------------------------------------------------------------
-# TEST 3: Missing Buyer PIN & Clarification Branch Routing
+# TEST 3: Optional Buyer PIN (Retail Consumer B2C Sale Succeeds Without PIN)
 # ---------------------------------------------------------------------------
-def test_missing_buyer_pin_triggers_clarification(agent_graph):
+def test_retail_consumer_sale_succeeds_without_pin(agent_graph):
     """
-    Verifies that when speech is missing a buyer PIN, the conditional router
-    branches to the Clarification Node rather than crashing or completing.
+    Verifies that when a trader sells to an ordinary retail consumer without a PIN,
+    the pipeline does NOT block; it completes as a valid Consumer B2C sale.
     """
     phone = "+254711100003"
     transcript = "Nimeuza viazi magunia kumi kwa shilingi elfu mbili kila moja."
@@ -170,10 +170,14 @@ def test_missing_buyer_pin_triggers_clarification(agent_graph):
     config = {"configurable": {"thread_id": phone}}
     result = agent_graph.invoke(input_state, config=config)
 
-    assert result.get("call_status") == "NEEDS_CLARIFICATION"
-    assert result.get("ready_for_filing") is False
-    spoken = result.get("spoken_summary", "")
-    assert "PIN ya mnunuzi haikutajwa" in spoken or "KRA PIN" in spoken
+    # Asserts that omission of individual PIN succeeds as a retail consumer sale
+    assert result.get("ready_for_filing") is True
+    assert result.get("call_status") == "READY_FOR_OSCU"
+    buyer = result.get("buyer_validation")
+    assert buyer is not None
+    assert buyer.is_valid is True
+    assert "Consumer" in buyer.trading_name
+    assert result.get("tax_breakdown").grand_total == 20000.0
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +229,7 @@ def test_multiturn_memory_checkpointing(agent_graph):
     phone = "+254799888777"
     config = {"configurable": {"thread_id": phone}}
 
-    # Turn 1: Provide items only
+    # Turn 1: Provide items (saved into MemorySaver)
     turn_1_state: JibuTaxState = {
         "caller_phone": phone,
         "transcript": "Nimeuza nyanya crates tano kwa shilingi elfu tatu kila crate.",
@@ -241,7 +245,8 @@ def test_multiturn_memory_checkpointing(agent_graph):
     }
 
     res_1 = agent_graph.invoke(turn_1_state, config=config)
-    assert res_1["call_status"] == "NEEDS_CLARIFICATION"
+    assert res_1["call_status"] == "READY_FOR_OSCU"
+    assert res_1["ready_for_filing"] is True
 
     # Inspect checkpoint snapshot
     snapshot = agent_graph.get_state(config)
