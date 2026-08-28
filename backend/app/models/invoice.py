@@ -1,7 +1,14 @@
-"""eTIMS fiscal invoice and line items persisted after OSCU signing."""
+"""
+File: backend/app/models/invoice.py
+Description:
+    eTIMS Fiscal Invoice and Line Items Models persisted after OSCU signing.
+    - Captures official electronic tax invoices generated via OSCU engine.
+    - Includes WhatsApp delivery state, QR verification payloads, and tax breakdowns.
+"""
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,9 +29,9 @@ class Invoice(Base):
 
     trader_pin: Mapped[str] = mapped_column(String(11), nullable=False, index=True)
     trader_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    trader_phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    trader_phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
-    buyer_pin: Mapped[str | None] = mapped_column(String(11), nullable=True, index=True)
+    buyer_pin: Mapped[Optional[str]] = mapped_column(String(11), nullable=True, index=True)
     buyer_name: Mapped[str] = mapped_column(String(255), nullable=False, default="WALK-IN CUSTOMER")
 
     total_standard_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
@@ -40,13 +47,13 @@ class Invoice(Base):
     qr_code_base64: Mapped[str] = mapped_column(Text, nullable=False)
 
     sms_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    sms_destination: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    sms_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sms_destination: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    sms_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     whatsapp_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    whatsapp_destination: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    whatsapp_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    whatsapp_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    whatsapp_destination: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    whatsapp_message_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    whatsapp_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

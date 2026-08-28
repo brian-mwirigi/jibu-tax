@@ -1,23 +1,55 @@
-"""Request/response shapes for eTIMS invoice issue, list, and verify."""
+"""
+File: backend/app/schemas/etims.py
+Description:
+    Request/response shapes for eTIMS invoice generation, listing, and OSCU verification.
+"""
 
 from datetime import datetime
 from decimal import Decimal
-
-from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.tax import TaxLineInput, TaxLineResult
 
+TaxCategory = Literal[
+    "standard",
+    "zero_rated",
+    "exempt",
+]
+
+
+class InvoiceItemCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    description: str = Field(min_length=1, max_length=200)
+    quantity: Decimal = Field(gt=0, le=100000)
+    unit_price: Decimal = Field(ge=0, le=100000000)
+    tax_category: TaxCategory = "exempt"
+
+    @field_validator("description")
+    @classmethod
+    def clean_description(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Description cannot be empty")
+        return normalized
+
 
 class CreateInvoiceRequest(BaseModel):
-    trader_pin: str | None = Field(default=None, max_length=11)
-    trader_name: str | None = Field(default=None, max_length=255)
-    trader_phone: str | None = Field(default=None, max_length=32)
-    buyer_pin: str | None = Field(default=None, max_length=11)
-    buyer_name: str | None = Field(default=None, max_length=255)
-    items: list[TaxLineInput] = Field(min_length=1)
+    model_config = ConfigDict(extra="ignore")
+
+    trader_pin: Optional[str] = Field(default=None, max_length=11)
+    seller_pin: Optional[str] = Field(default=None, max_length=11)
+    trader_name: Optional[str] = Field(default=None, max_length=255)
+    trader_phone: Optional[str] = Field(default=None, max_length=32)
+    buyer_pin: Optional[str] = Field(default=None, max_length=11)
+    buyer_name: Optional[str] = Field(default=None, max_length=255)
+    items: List[TaxLineInput] = Field(min_length=1)
     send_sms: bool = True
     send_whatsapp: bool = True
-    claimed_grand_total: Decimal | None = None
+    claimed_grand_total: Optional[Decimal] = None
+    buyer_phone: Optional[str] = Field(default=None, max_length=20)
+    confirmation_token: Optional[str] = Field(default=None)
 
 
 class InvoiceItemResponse(TaxLineResult):
@@ -32,10 +64,10 @@ class InvoiceResponse(BaseModel):
     oscu_device_id: str
     trader_pin: str
     trader_name: str
-    trader_phone: str | None
-    buyer_pin: str | None
+    trader_phone: Optional[str]
+    buyer_pin: Optional[str]
     buyer_name: str
-    items: list[InvoiceItemResponse]
+    items: List[InvoiceItemResponse]
     total_standard_amount: Decimal
     total_standard_vat: Decimal
     total_fuel_amount: Decimal
@@ -47,12 +79,12 @@ class InvoiceResponse(BaseModel):
     qr_code_url: str
     qr_code_base64: str
     sms_status: str
-    sms_destination: str | None
-    sms_body: str | None
+    sms_destination: Optional[str]
+    sms_body: Optional[str]
     whatsapp_status: str
-    whatsapp_destination: str | None
-    whatsapp_message_id: str | None
-    whatsapp_body: str | None
+    whatsapp_destination: Optional[str]
+    whatsapp_message_id: Optional[str]
+    whatsapp_body: Optional[str]
     signature_valid: bool = True
     issued_at: datetime
     spoken_en: str
@@ -72,4 +104,4 @@ class InvoiceListItem(BaseModel):
 class VerifyInvoiceResponse(BaseModel):
     valid: bool
     message: str
-    invoice: InvoiceResponse | None = None
+    invoice: Optional[InvoiceResponse] = None

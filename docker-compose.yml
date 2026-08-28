@@ -4,6 +4,7 @@
 #   - Orchestrates PostgreSQL database container on port 5432.
 #   - Runs FastAPI backend service connected to PostgreSQL.
 #   - Mounts frontend development environment on port 5173.
+#   - Sensitive credentials and passwords are read securely from the git-ignored .env file.
 
 version: '3.8'
 
@@ -12,18 +13,32 @@ services:
     image: postgres:16-alpine
     container_name: jibutax-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: jibutax
-      POSTGRES_PASSWORD: jibutax
-      POSTGRES_DB: jibutax_db
+      POSTGRES_USER: ${POSTGRES_USER:-jibutax}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-jibutax_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jibutax -d jibutax_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jibutax} -d ${POSTGRES_DB:-jibutax_db}"]
       interval: 5s
       timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: jibutax-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   backend:
@@ -35,15 +50,41 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://jibutax:jibutax@postgres:5432/jibutax_db
-      - ENVIRONMENT=development
-      - PORT=8000
-      - HOST=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - PORT=${PORT:-8000}
+      - HOST=${HOST:-0.0.0.0}
     volumes:
       - ./backend:/app
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jibutax-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - ./backend:/app
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
 
   frontend:
     build:
@@ -54,7 +95,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
     depends_on:
       - backend
 
