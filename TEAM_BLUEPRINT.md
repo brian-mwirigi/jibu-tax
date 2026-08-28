@@ -36,12 +36,12 @@
 
 ### Role 4: The Multi-Agent Routing Logic (LangGraph Engineer)
 
-**The Mission:** Build the "brain" of the system using Claude 3.5 Sonnet and LangGraph, routing the data deterministically.
+**The Mission:** Build the "brain" of the system using Google Gemini (Gemini 1.5 Flash/Pro) and LangGraph, routing the data deterministically.
 
 * **The Architecture:** They define the rigid `TypedDict` state (Memory) that passes between nodes.
 * **Node Construction:** They build the Directed Acyclic Graph (DAG):
-  * *Node 1 (Extraction):* Uses Claude to pull entities from the voice transcript.
-  * *Node 2 (Validation):* Forces Claude to use Role 1's MCP tools to hit Role 3's PIN Checker. If it fails, the graph routes backward.
+  * *Node 1 (Extraction):* Uses Google Gemini to pull entities from the voice transcript.
+  * *Node 2 (Validation):* Forces Gemini to use Role 1's MCP tools to hit Role 3's PIN Checker. If it fails, the graph routes backward.
   * *Node 3 (Deterministic Math):* A pure Python node (no AI) that takes the extracted items and calculates the exact 16% VAT.
 * **Checkpointer Integration:** They configure LangGraph's `MemorySaver` using the user's phone number as the `thread_id` so that if the live call drops or lags, the AI's state is preserved perfectly.
 

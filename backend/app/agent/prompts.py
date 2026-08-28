@@ -1,7 +1,7 @@
 """
 File: backend/app/agent/prompts.py
 Description:
-    Prompts & System Instructions for Claude 3.5 Sonnet extraction node.
+    Prompts & System Instructions for Google Gemini extraction node.
     Specially tuned to parse Kenyan code-switching between Swahili, English, and Sheng.
 """
 
