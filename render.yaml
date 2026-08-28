@@ -35,6 +35,14 @@ services:
         value: '["https://jibutax.onrender.com","http://localhost:5173"]'
       - key: KRA_ENVIRONMENT
         value: sandbox
+      - key: WHATSAPP_PROVIDER
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_META_TOKEN
+        sync: false
+      - key: WHATSAPP_META_PHONE_NUMBER_ID
+        sync: false
 
   - type: worker
     name: jibutax-worker
