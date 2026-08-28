@@ -1,9 +1,29 @@
-"""
-File: backend/app/schemas/webhook.py
-Description:
-    Pydantic Schemas for ElevenLabs Real-Time Agent Webhooks.
-    - ValidateBuyerWebhookInput / Output: Real-time buyer PIN verification mid-call.
-    - CalculateTaxWebhookInput / Output: Real-time deterministic tax calculation mid-call.
-    - FileInvoiceWebhookInput / Output: Real-time eTIMS invoice generation mid-call.
-    - ElevenLabsPostCallPayload: Webhook payload received on call hangup with full transcript and duration.
-"""
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class ToolCallRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+
+    tool: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    request_id: str = Field(
+        min_length=16,
+        max_length=200,
+    )
+
+    timestamp: int
+
+    arguments: dict[str, Any]
+
+
+class ToolCallResponse(BaseModel):
+    success: bool
+    result: dict[str, Any] | None = None
+    message: str
