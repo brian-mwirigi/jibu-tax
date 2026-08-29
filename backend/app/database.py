@@ -115,22 +115,30 @@ def seed_default_taxpayers() -> None:
         from sqlmodel import Session, select
         with Session(engine) as session:
             demo_accounts = [
-                ("+254712345678", "A012345678W", "MARY WANJIKU MAMA MBOGA", "sw"),
-                ("+254722998877", "A012345678W", "OCHIENG AGROVET SUPPLIES", "sw"),
-                ("+254733112233", "A012345678W", "JIBUTAX NAIROBI JUA KALI", "sheng"),
+                ("+254712345678", "A012345678W", "MARY WANJIKU MAMA MBOGA"),
+                ("+254722998877", "A012345679X", "OCHIENG AGROVET SUPPLIES"),
+                ("+254733112233", "A012345680Y", "JIBUTAX NAIROBI JUA KALI"),
             ]
-            for phone, pin, name, lang in demo_accounts:
-                existing = session.exec(select(Taxpayer).where(Taxpayer.phone_number == phone)).first()
+            for phone, pin, name in demo_accounts:
+                existing = session.exec(select(Taxpayer).where(Taxpayer.phone == phone)).first()
                 if not existing:
-                    session.add(Taxpayer(
-                        phone_number=phone,
-                        kra_pin=pin,
-                        legal_name=name,
-                        preferred_language=lang,
-                        is_verified=True,
-                    ))
+                    # Also check by PIN
+                    by_pin = session.exec(select(Taxpayer).where(Taxpayer.pin == pin)).first()
+                    if by_pin:
+                        by_pin.phone = phone
+                        session.add(by_pin)
+                    else:
+                        session.add(Taxpayer(
+                            pin=pin,
+                            legal_name=name,
+                            phone=phone,
+                            vat_registered=True,
+                            etims_onboarded=True,
+                            tot_registered=True,
+                        ))
             session.commit()
     except Exception as exc:
+        import logging
         logging.getLogger(__name__).warning("Default taxpayer seeding skipped: %s", exc)
 
 
