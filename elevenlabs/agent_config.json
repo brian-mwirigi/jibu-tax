@@ -1,0 +1,335 @@
+{
+  "name": "JibuTax eTIMS Voice Assistant",
+  "description": "Msaidizi wa eTIMS — voice-first KRA eTIMS filing for informal Kenyan traders (Kiswahili, English, Sheng).",
+  "metadata": {
+    "persona": "Msaidizi wa eTIMS",
+    "canonical_prompt_file": "elevenlabs/system_prompt.md",
+    "supported_languages": ["sw", "en", "sheng"],
+    "replace_before_deploy": {
+      "BACKEND_PUBLIC_URL": "Public FastAPI base, e.g. https://jibutax-backend.onrender.com",
+      "ORCHESTRATOR_PUBLIC_URL": "Public orchestrator base, e.g. https://jibutax-orchestrator.onrender.com",
+      "WEBHOOK_SECRET": "Must match backend WEBHOOK_SECRET; store as an ElevenLabs workspace secret, not plaintext"
+    }
+  },
+  "conversation_config": {
+    "agent": {
+      "first_message": "Habari, mimi ni Msaidizi wa eTIMS. Umeuzisha nini leo?",
+      "language": "sw",
+      "disable_first_message_interruptions": false,
+      "prompt": {
+        "llm": "gemini-2.5-flash",
+        "temperature": 0.3,
+        "max_tokens": 220,
+        "prompt": "You are Msaidizi wa eTIMS, the JibuTax voice assistant for informal traders in Kenya. File one official KRA eTIMS invoice per call from speech. Never invent tax, PIN status, taxpayer names, invoice numbers, control codes, or QR URLs.\n\nLANGUAGE: Follow the trader. Mix Kiswahili, English, and Sheng if they do. Keep turns to one or two short sentences. Vocabulary: mahindi=maize, sukuma/mboga=vegetables, viazi/waru=potatoes, nyanya=tomatoes, maziwa=milk, mayai=eggs, mchele=rice, samaki=fish, gunia=bag, kilo=kg, gorogoro~2kg, debe~20kg, kreti=crate, so=100, punch=500, thao=1000, mia tano=500, elfu moja=1000. Repeat money in words and digits when confirming.\n\nCOLLECT IN ORDER, asking only for the next missing field: item, quantity, unit, unit_price (KES), buyer_pin. Buyer name is optional. Trust the latest correction (wait / hapana / nimesema / si 50 ni 60). If they say 50 kilos for 4500, quantity is 50 and 4500 is the total unless they say per unit.\n\nKRA PIN: 11 characters, A or P + 9 digits + letter (example P051234567M). Strip spaces, uppercase, read back digit-by-digit, then wait for yes before any tool. Never pad or invent a PIN.\n\nTOOLS — you do not calculate VAT or talk to iTax yourself:\n1) validate_buyer_pin after PIN read-back is confirmed. Speak a filler immediately: \"Nipe sekunde moja, nacheck hiyo PIN kwenye portal ya serikali.\"\n2) calculate_tax only after PIN is valid and item, quantity, unit, unit_price are complete. Speak the tool's VAT and total, never your own math.\n3) file_etims_invoice only after you recap the sale+tax and they clearly say ndiyo / sawa / yes / file / enda. Filler: \"Sawa, ninaandika receipt kwenye KRA sasa.\"\nOn file success, read back only invoice_number, total, and that an SMS with the KRA QR link is coming. Then stop.\n\nNever collect national ID, passwords, OTPs, or M-Pesa PINs. If they hang up, do not file. If they go off-topic, one sentence then return to the sale.",
+        "ignore_default_personality": true,
+        "tools": [
+          {
+            "type": "webhook",
+            "name": "validate_buyer_pin",
+            "description": "Zero-trust KRA PIN lookup via JibuTax backend. Call ONLY after the trader confirms the digit-by-digit PIN read-back. Do not invent validity or a business name. Speak a filler before/during the call: checking the PIN on the government portal.",
+            "api_schema": {
+              "url": "https://YOUR_BACKEND_HOST/api/v1/tools/validate-buyer",
+              "method": "POST",
+              "request_headers": {
+                "Content-Type": "application/json",
+                "X-Webhook-Secret": "YOUR_WEBHOOK_SECRET"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "description": "Buyer PIN verification payload",
+                "required": ["buyer_pin"],
+                "properties": {
+                  "buyer_pin": {
+                    "type": "string",
+                    "description": "Confirmed KRA PIN, uppercase, no spaces. Format: A or P, 9 digits, 1 letter. Example P051234567M."
+                  },
+                  "call_id": {
+                    "type": "string",
+                    "description": "ElevenLabs conversation/call id if known."
+                  }
+                }
+              }
+            },
+            "execution_mode": "async",
+            "pre_tool_speech": "force",
+            "response_timeout_secs": 8,
+            "tool_call_sound": "typing",
+            "tool_call_sound_behavior": "always",
+            "assignments": [
+              {
+                "dynamic_variable": "buyer_legal_name",
+                "value_path": "legal_name",
+                "source": "response"
+              },
+              {
+                "dynamic_variable": "buyer_trading_name",
+                "value_path": "trading_name",
+                "source": "response"
+              },
+              {
+                "dynamic_variable": "pin_is_valid",
+                "value_path": "is_valid",
+                "source": "response"
+              }
+            ]
+          },
+          {
+            "type": "webhook",
+            "name": "calculate_tax",
+            "description": "Deterministic Kenya VAT engine. Call after PIN is valid and item, quantity, unit, and unit_price are complete. Pass trader values unchanged. Speak only the VAT, classification, and grand total returned by the tool.",
+            "api_schema": {
+              "url": "https://YOUR_BACKEND_HOST/api/v1/tools/calculate-tax",
+              "method": "POST",
+              "request_headers": {
+                "Content-Type": "application/json",
+                "X-Webhook-Secret": "YOUR_WEBHOOK_SECRET"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "description": "Sale line for VAT classification",
+                "required": ["item_name", "quantity", "unit_price"],
+                "properties": {
+                  "item_name": {
+                    "type": "string",
+                    "description": "Commodity or service sold, normalized (e.g. maize, tomatoes, cement)."
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "description": "Quantity sold as a number, e.g. 50."
+                  },
+                  "unit": {
+                    "type": "string",
+                    "description": "Unit of measure: kg, bags, litres, pieces, crates."
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "description": "Price per unit in Kenya Shillings."
+                  },
+                  "buyer_pin": {
+                    "type": "string",
+                    "description": "Already-validated buyer KRA PIN."
+                  }
+                }
+              }
+            },
+            "execution_mode": "async",
+            "pre_tool_speech": "force",
+            "response_timeout_secs": 8,
+            "tool_call_sound": "typing",
+            "tool_call_sound_behavior": "always",
+            "assignments": [
+              {
+                "dynamic_variable": "vat_amount",
+                "value_path": "vat_amount",
+                "source": "response"
+              },
+              {
+                "dynamic_variable": "grand_total",
+                "value_path": "grand_total",
+                "source": "response"
+              },
+              {
+                "dynamic_variable": "tax_classification",
+                "value_path": "classification",
+                "source": "response"
+              }
+            ]
+          },
+          {
+            "type": "webhook",
+            "name": "file_etims_invoice",
+            "description": "Files the official eTIMS OSCU invoice. Call ONLY after a spoken recap and a clear yes (ndiyo, sawa, yes, file, enda). Never call on hang-up or if they said no.",
+            "api_schema": {
+              "url": "https://YOUR_BACKEND_HOST/api/v1/tools/file-invoice",
+              "method": "POST",
+              "request_headers": {
+                "Content-Type": "application/json",
+                "X-Webhook-Secret": "YOUR_WEBHOOK_SECRET"
+              },
+              "request_body_schema": {
+                "type": "object",
+                "description": "Confirmed sale to file on eTIMS",
+                "required": ["item_name", "quantity", "unit_price", "buyer_pin", "trader_confirmed"],
+                "properties": {
+                  "item_name": {
+                    "type": "string",
+                    "description": "Confirmed commodity or service."
+                  },
+                  "quantity": {
+                    "type": "number",
+                    "description": "Confirmed quantity."
+                  },
+                  "unit": {
+                    "type": "string",
+                    "description": "Confirmed unit of measure."
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "description": "Confirmed unit price in KES."
+                  },
+                  "buyer_pin": {
+                    "type": "string",
+                    "description": "Validated buyer KRA PIN."
+                  },
+                  "buyer_name": {
+                    "type": "string",
+                    "description": "Buyer legal or trading name from validate_buyer_pin if available."
+                  },
+                  "trader_confirmed": {
+                    "type": "boolean",
+                    "description": "Must be true. Set only after the trader explicitly confirmed the recap."
+                  },
+                  "call_id": {
+                    "type": "string",
+                    "description": "ElevenLabs conversation/call id if known."
+                  }
+                }
+              }
+            },
+            "execution_mode": "immediate",
+            "pre_tool_speech": "force",
+            "response_timeout_secs": 15,
+            "tool_call_sound": "typing",
+            "tool_call_sound_behavior": "always",
+            "assignments": [
+              {
+                "dynamic_variable": "invoice_number",
+                "value_path": "invoice_number",
+                "source": "response"
+              },
+              {
+                "dynamic_variable": "oscu_control_code",
+                "value_path": "oscu_control_code",
+                "source": "response"
+              }
+            ]
+          }
+        ],
+        "built_in_tools": {
+          "end_call": {
+            "type": "system",
+            "name": "end_call",
+            "description": "End the call after the invoice is filed or the trader says goodbye. Do not end the call while a tool is still running.",
+            "params": {
+              "system_tool_type": "end_call"
+            }
+          },
+          "language_detection": {
+            "type": "system",
+            "name": "language_detection",
+            "params": {
+              "system_tool_type": "language_detection",
+              "only_at_conversation_start": false
+            }
+          },
+          "skip_turn": null,
+          "transfer_to_agent": null,
+          "transfer_to_number": null
+        }
+      }
+    },
+    "asr": {
+      "quality": "high",
+      "provider": "elevenlabs",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": [
+        "eTIMS",
+        "KRA",
+        "PIN",
+        "mahindi",
+        "sukuma",
+        "viazi",
+        "waru",
+        "nyanya",
+        "maziwa",
+        "mayai",
+        "mchele",
+        "samaki",
+        "gunia",
+        "gorogoro",
+        "debe",
+        "kreti",
+        "shillings",
+        "ndiyo",
+        "hapana",
+        "sawa",
+        "receipt"
+      ]
+    },
+    "turn": {
+      "turn_timeout": 8,
+      "silence_end_call_timeout": 30,
+      "mode": "turn"
+    },
+    "tts": {
+      "model_id": "eleven_flash_v2_5",
+      "voice_id": "cjVigY5qzO86Huf0OWal",
+      "agent_output_audio_format": "pcm_16000",
+      "stability": 0.45,
+      "similarity_boost": 0.8,
+      "speed": 1.0
+    },
+    "conversation": {
+      "max_duration_seconds": 600,
+      "text_only": false
+    },
+    "language_presets": {
+      "en": {
+        "overrides": {
+          "agent": {
+            "language": "en",
+            "first_message": "Hi, I'm Msaidizi wa eTIMS. What did you sell today?"
+          }
+        }
+      }
+    }
+  },
+  "platform_settings": {
+    "auth": {
+      "enable_auth": false
+    },
+    "privacy": {
+      "record_voice": true,
+      "retention_days": 14,
+      "delete_transcript_and_pii": true,
+      "delete_audio": true
+    },
+    "call_limits": {
+      "agent_concurrency_limit": -1,
+      "daily_limit": 1000
+    },
+    "overrides": {
+      "conversation_config_override": {
+        "agent": {
+          "first_message": true,
+          "language": true,
+          "prompt": {
+            "prompt": true
+          }
+        }
+      }
+    }
+  },
+  "orchestration_webhooks": {
+    "call_start": {
+      "method": "POST",
+      "url": "https://YOUR_ORCHESTRATOR_HOST/webhook/elevenlabs/call-start",
+      "notes": "Wire in ElevenLabs workspace as conversation initiation webhook. Body should include call_id."
+    },
+    "transcript": {
+      "method": "POST",
+      "url": "https://YOUR_ORCHESTRATOR_HOST/webhook/elevenlabs/transcript",
+      "notes": "Optional parallel transcript stream for Role 2 state machine / dashboard telemetry."
+    },
+    "call_end": {
+      "method": "POST",
+      "url": "https://YOUR_ORCHESTRATOR_HOST/webhook/elevenlabs/call-end",
+      "notes": "Create an ElevenLabs post-call workspace webhook pointing here, then set platform_settings post_call_webhook_id."
+    },
+    "backend_post_call": {
+      "method": "POST",
+      "url": "https://YOUR_BACKEND_HOST/api/v1/tools/post-call",
+      "notes": "Role 1 hang-up worker: persist ledger + SMS. Orchestrator may forward here."
+    }
+  }
+}

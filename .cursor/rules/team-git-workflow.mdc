@@ -1,0 +1,12 @@
+---
+description: JibuTax team git remote, branch names, and pull request workflow
+alwaysApply: true
+---
+
+# JibuTax team git workflow
+
+- Contribute only to https://github.com/brian-mwirigi/jibu-tax (this is the team `origin`).
+- Never commit or push to `main`. Branch from latest `origin/main`, push the feature branch, and open a PR into `main`.
+- Role 2 branch name: `feat/role2-audio-orchestrator`. Other roles: `feat/role1-mcp-infra`, `feat/role3-etims-simulator`, `feat/role4-agent-routing`, `feat/role5-ledger-filing`, `feat/role6-telemetry-dashboard`.
+- After finishing a task that should land on the team repo, commit on the feature branch, `git push -u origin HEAD`, then `gh pr create --repo brian-mwirigi/jibu-tax --base main`.
+- Do not add nested extra clones (e.g. `jibu-tax/jibu-tax`) or push to AceyTracy/jibu-tax unless the user explicitly asks.

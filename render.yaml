@@ -1,0 +1,130 @@
+# File: render.yaml
+# Description:
+#   Render 1-Click Deployment Blueprint.
+#   - FastAPI web service
+#   - Celery worker (async immutable ledger writes)
+#   - Cron on the 18th for TOT / NIL filing
+#   - Managed PostgreSQL 16
+#   - Redis (Celery broker)
+#   - React static site
+
+services:
+  - type: web
+    name: jibutax-backend
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
+      - key: CORS_ORIGINS
+        value: '["https://jibutax.onrender.com","http://localhost:5173"]'
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+      - key: WHATSAPP_PROVIDER
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_META_TOKEN
+        sync: false
+      - key: WHATSAPP_META_PHONE_NUMBER_ID
+        sync: false
+
+  - type: worker
+    name: jibutax-worker
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+
+  - type: cron
+    name: jibutax-month-end-filing
+    runtime: python
+    region: frankfurt
+    plan: starter
+    rootDir: backend
+    schedule: "0 6 18 * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.cron.month_end
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jibutax-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: jibutax-redis
+          property: connectionString
+      - key: KRA_ENVIRONMENT
+        value: sandbox
+
+  - type: redis
+    name: jibutax-redis
+    region: frankfurt
+    plan: starter
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: jibutax-frontend
+    runtime: static
+    region: frankfurt
+    plan: starter
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: jibutax-backend
+          property: host
+
+databases:
+  - name: jibutax-db
+    region: frankfurt
+    plan: starter
+    databaseName: jibutax_db
+    user: jibutax
+    postgresMajorVersion: 16
