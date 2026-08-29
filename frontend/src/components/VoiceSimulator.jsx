@@ -412,22 +412,35 @@ export default function VoiceSimulator({ onInvoiceGenerated, onViewReceipt }) {
             </p>
           </div>
 
-          {/* Preset Buttons Bar */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-gray-400 font-medium hidden sm:inline">Quick Trades:</span>
-            {PRESET_SPEECHES.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => handleSelectPreset(preset)}
-                className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
-                  transcript === preset.text
-                    ? 'bg-gray-800 text-white border-kra-green shadow-sm'
-                    : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:bg-gray-800'
-                }`}
-              >
-                {preset.tag}
-              </button>
-            ))}
+          {/* Preset Buttons & ElevenLabs Web Dialer Launch Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <a
+              href="https://elevenlabs.io/app/talk-to?agent_id=agent_7801m159xhyyfv4vzqxebshchsp7&branch_id=agtbrch_2301m159xjjpfcqvyehfzy2q08sm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-500/30 transition-all group"
+            >
+              <Smartphone className="w-4 h-4 text-emerald-200 group-hover:scale-110 transition-transform" />
+              <span>Launch ElevenLabs Web Dialer</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </a>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-400 font-medium hidden sm:inline">Quick Trades:</span>
+              {PRESET_SPEECHES.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handleSelectPreset(preset)}
+                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                    transcript === preset.text
+                      ? 'bg-gray-800 text-white border-kra-green shadow-sm'
+                      : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:bg-gray-800'
+                  }`}
+                >
+                  {preset.tag}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
