@@ -70,10 +70,7 @@ class KRAService:
                 "KRA API key is not configured"
             )
 
-        api_key = (
-            settings.kra_api_key
-            .get_secret_value()
-        )
+        api_key = settings.kra_api_key
 
         headers = {
             "Authorization": f"Bearer {api_key}",
