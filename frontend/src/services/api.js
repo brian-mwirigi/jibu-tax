@@ -108,7 +108,8 @@ export const api = {
    */
   async previewTax(items, claimedTotal = null, traderPin = 'A012345678W') {
     const formattedItems = items.map((i) => ({
-      item_name: i.item_name || i.name || '',
+      description: i.description || i.item_name || i.name || '',
+      item_name: i.item_name || i.description || i.name || '',
       quantity: parseFloat(i.quantity) || 1,
       unit_price: parseFloat(i.unit_price) || 0,
       tax_rate: i.tax_rate !== undefined ? parseFloat(i.tax_rate) : undefined,
