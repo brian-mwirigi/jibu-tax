@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🇰🇪 JibuTax | Voice-First eTIMS Orchestrator
+# JibuTax | Voice-First eTIMS Orchestrator
 ### *Turn a 30-Second Swahili Phone Call into an Official KRA Electronic Tax Invoice in <500ms.*
 
 [![CI / Automated Test Suite](https://img.shields.io/badge/Test%20Suite-65%2F65%20Passed%20(100%25)-00C853?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/brian-mwirigi/jibu-tax)
@@ -13,14 +13,14 @@
 
 <br/>
 
-> 📱 **No smartphone. No internet connection. No accounting degree.**  
+> **No smartphone. No internet connection. No accounting degree.**  
 > **Just dial, speak your trade in Sheng, Swahili, or English, and get an instant official KRA QR-stamped invoice sent straight to your WhatsApp and SMS.**
 
 ---
 
-### 🔥 PEAK AUTOMATION HIGHLIGHT: Autonomous 1.5% Turnover Tax (TOT) & NIL Defense
+### PEAK AUTOMATION HIGHLIGHT: Autonomous 1.5% Turnover Tax (TOT) & NIL Defense
 
-> 🛡️ **Zero-Touch Month-End Tax Filing on Autopilot:**  
+> **Zero-Touch Month-End Tax Filing on Autopilot:**  
 > Under Kenya's Income Tax Act (Section 12C), informal traders face **KES 2,000 monthly late-filing fines** if they miss their returns.  
 > **JibuTax eliminates this entirely:** On the 18th of every month, our autonomous Celery cron scans the immutable ledger, aggregates all sales, and submits the official 1.5% Turnover Tax return to KRA with an instant M-Pesa PRN payment slip. If the trader had zero sales, **JibuTax auto-files a legal NIL return with Obligation Code `7`** — 100% autonomously protecting informal traders from government penalties without them lifting a finger!
 
@@ -28,7 +28,7 @@
 
 </div>
 
-## 💡 The Problem: A $40 Billion Informal Economy Under Siege
+## The Problem: A $40 Billion Informal Economy Under Siege
 
 Under Kenya's **Finance Act 2023 Section 16**, the Kenya Revenue Authority (KRA) introduced a strict mandate: **No business expense is tax-deductible without an official eTIMS electronic tax invoice.**
 
@@ -39,19 +39,19 @@ This single law created an existential crisis across East Africa:
 
 ---
 
-## ⚡ The Solution: JibuTax
+## The Solution: JibuTax
 
 **JibuTax** transforms any standard cellular phone line (GSM, feature phone, or smartphone) into an intelligent, government-compliant fiscal point-of-sale terminal.
 
 ```
 "Nimeuzia Safari Hotel magunia hamsini ya mahindi, gunia ni mia nane."
-                                 ⬇️
+                                 |
   [ Instant KRA-Signed Invoice + WhatsApp QR Code Dispatched in 400ms ]
-                                 ⬇️
+                                 |
   [ Auto-Aggregated into 1.5% Turnover Tax & NIL Defense on the 18th ]
 ```
 
-### 🌟 Why JibuTax Wins (Our Unfair Advantage)
+### Why JibuTax Wins (Our Unfair Advantage)
 
 | Friction Point | Traditional eTIMS | JibuTax Voice Engine |
 | :--- | :--- | :--- |
@@ -65,20 +65,20 @@ This single law created an existential crisis across East Africa:
 
 ---
 
-## 🏗️ Architecture & High-Performance Pipeline
+## Architecture & High-Performance Pipeline
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Trader as 🧑🌾 Informal Trader
-    participant Telecom as 📞 Voice Gateway (ElevenLabs)
-    participant Dispatcher as 🛡️ Tool Dispatcher (Role 1)
-    participant Agent as 🧠 LangGraph Brain (Role 4)
-    participant TaxMath as ⚖️ Deterministic Tax Engine
-    participant OSCU as 🔐 Cryptographic OSCU (Role 3)
-    participant DB as 🗄️ Immutable Ledger (Role 5)
-    participant WhatsApp as 📲 WhatsApp / SMS Dispatcher
-    actor Buyer as 🏨 Corporate Buyer
+    actor Trader as Informal Trader
+    participant Telecom as Voice Gateway (ElevenLabs)
+    participant Dispatcher as Tool Dispatcher (Role 1)
+    participant Agent as LangGraph Brain (Role 4)
+    participant TaxMath as Deterministic Tax Engine
+    participant OSCU as Cryptographic OSCU (Role 3)
+    participant DB as Immutable Ledger (Role 5)
+    participant WhatsApp as WhatsApp / SMS Dispatcher
+    actor Buyer as Corporate Buyer
 
     Trader->>Telecom: Speaks: "Nimeuzia Safari Hotel magunia 50 ya mahindi, gunia mia nane"
     Telecom->>Dispatcher: POST /tools/validate-buyer (HMAC-SHA256 Signed)
@@ -114,26 +114,26 @@ sequenceDiagram
 
 ---
 
-## 💎 Core Feature Breakdown
+## Core Feature Breakdown
 
-### 1. 📈 Autonomous Month-End Tax Filing & NIL Defense (Role 5 - PEAK FEATURE)
+### 1. Autonomous Month-End Tax Filing & NIL Defense (Role 5 - PEAK FEATURE)
 - **1.5% Turnover Tax (TOT) Calculation:** Section 12C final tax engine auto-sums all ledger receipts and computes the exact 1.5% monthly obligation.
 - **Instant M-Pesa PRN Generation:** Generates official Payment Registration Numbers (PRNs) directly from KRA for friction-free mobile money tax settlement.
 - **Automated NIL Return Filing:** If a trader has zero sales in a calendar month, JibuTax automatically files a legal NIL return with obligation code `7`, preventing KRA late-filing fines of KES 2,000/month.
 
-### 2. 🧠 Autonomous Voice Intelligence (Role 4)
-- **LangGraph Multi-Agent State Machine:** Implements a strict DAG (`START` $\to$ `extract_sale` $\to$ `validate_pin` $\to$ `calculate_tax` $\to$ `END`).
+### 2. Autonomous Voice Intelligence (Role 4)
+- **LangGraph Multi-Agent State Machine:** Implements a strict DAG (`START` -> `extract_sale` -> `validate_pin` -> `calculate_tax` -> `END`).
 - **Multilingual Entity Extraction:** Powered by Google Gemini Flash-Lite. Flawlessly understands Kenyan street slang, Swahili dialects, and mixed Sheng codeswitching.
 - **Multi-Turn MemorySaver:** Handles conversational context and interruptions across calls using `caller_phone` as the persistent thread ID.
 
-### 3. 📱 Phone-to-PIN Identity & Zero-Friction Sales
+### 3. Phone-to-PIN Identity & Zero-Friction Sales
 - **One-Time Biometric Onboarding:** On their first call, traders register their KRA PIN once. It is permanently bound to their MSISDN in PostgreSQL.
 - **Subsequent Calls (Zero PIN Recital):** The caller ID automatically identifies the seller and attaches their official KRA PIN to the invoice.
 - **B2B vs. Retail Consumer (B2C) Intelligence:**
   - **B2B Transactions:** Trader mentions the company name or PIN (*"Safari Hotel", "P051234567M"*); JibuTax validates it against the registry in real-time.
   - **Retail Consumer (B2C) Sales:** Everyday walk-in customer sales pass immediately without a buyer PIN as `CONSUMER_RETAIL`.
 
-### 4. ⚖️ 100% Deterministic Tax Engine (Zero AI Math Hallucinations)
+### 4. 100% Deterministic Tax Engine (Zero AI Math Hallucinations)
 - **No AI in Calculations:** LLMs are strictly forbidden from performing arithmetic. All sums, taxes, and classifications are computed by hardcoded, audited Python logic.
 - **VAT Act Compliance:**
   - **Standard Rate (16%):** Manufactured goods, cement, hardware, commercial services.
@@ -141,19 +141,19 @@ sequenceDiagram
   - **Second Schedule (Zero-Rated):** Fertilizers, seeds, exported goods.
   - **Fuel Tax (8%):** Diesel, petrol, and energy inputs.
 
-### 5. 🔐 Cryptographic OSCU Simulator & Tamper-Proof Ledger (Roles 1, 3 & 5)
+### 5. Cryptographic OSCU Simulator & Tamper-Proof Ledger (Roles 1, 3 & 5)
 - **KRA OSCU Control Codes:** Every electronic invoice is signed using HMAC-SHA256 with device-level keys (`OSCU-KE-NBO-0042`) generating grouped hex signatures (`XXXX-XXXX-XXXX-XXXX`).
 - **Verifiable KRA QR Codes:** Auto-generates standard 2D barcodes embedding canonical payload verification links (`https://sbx.kra.go.ke/verify?cu=...`).
-- **Cryptographic Hash Chain:** Every sale is bound to the previous ledger entry via SHA-256 hash chaining (`prev_hash` $\to$ `entry_hash`).
+- **Cryptographic Hash Chain:** Every sale is bound to the previous ledger entry via SHA-256 hash chaining (`prev_hash` -> `entry_hash`).
 - **PostgreSQL Append-Only Trigger:** Database-level trigger `prevent_ledger_mutation()` rejects all `UPDATE` and `DELETE` queries.
 
-### 6. 📲 Omnichannel Receipt Dispatch (Role 3)
+### 6. Omnichannel Receipt Dispatch (Role 3)
 - **Meta WhatsApp Cloud API:** Dispatches the high-resolution cryptographic QR code image and complete line-item breakdown directly to the trader's WhatsApp.
 - **SMS Fallback (Africa's Talking):** Instantly sends a short SMS receipt with a short link to the invoice for basic feature phone users.
 
 ---
 
-## 🧪 Battle-Tested Engineering: 65 / 65 Automated Tests Passing
+## Battle-Tested Engineering: 65 / 65 Automated Tests Passing
 
 JibuTax is engineered with institutional rigor. The entire backend is validated by an automated test suite covering every edge case:
 
@@ -177,7 +177,7 @@ backend/tests/test_whatsapp_dispatcher.py ... PASSED [100%]  # WhatsApp QR Media
 
 ---
 
-## 🚀 Quickstart & Local Installation
+## Quickstart & Local Installation
 
 ### Prerequisites
 - **Python 3.10+** (or Python 3.12)
@@ -240,7 +240,7 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 📡 REST API Reference
+## REST API Reference
 
 | Method | Endpoint | Description | Auth / Security |
 | :--- | :--- | :--- | :--- |
@@ -255,7 +255,7 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 🏆 The Team & Hackathon Roles
+## The Team & Hackathon Roles
 
 | Role | Domain & Ownership | Key Technologies |
 | :--- | :--- | :--- |
@@ -268,12 +268,12 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  <sub>Built with ❤️ in Nairobi, Kenya for the Next Generation of African Micro-Enterprises.</sub>
+  <sub>Built in Nairobi, Kenya for the Next Generation of African Micro-Enterprises.</sub>
 </div>
