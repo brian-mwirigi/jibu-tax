@@ -44,27 +44,12 @@ KNOWN_TAXPAYERS = {
 def validate_pin_node(state: JibuTaxState) -> Dict[str, Any]:
     """
     Node 2 Handler:
-    Verifies the buyer's PIN extracted in Node 1.
+    Verifies the buyer's PIN extracted in Node 1. Accepts any PIN, number, or retail customer gracefully.
     """
     sale = state.get("sale")
-    current_retry = state.get("retry_count", 0)
 
     # If no sale was parsed from Node 1
     if not sale:
-        return {
-            "buyer_validation": BuyerValidationResult(
-                is_valid=False,
-                pin="",
-                error_message="Hakuna taarifa za mauzo zilizopatikana (No sales information detected)."
-            ),
-            "retry_count": current_retry + 1,
-            "call_status": "NEEDS_CLARIFICATION",
-        }
-
-    pin = (sale.buyer_pin or "").strip().upper()
-
-    # Case 1: No Buyer PIN mentioned -> Standard Retail Consumer (B2C) Sale
-    if not pin:
         return {
             "buyer_validation": BuyerValidationResult(
                 is_valid=True,
@@ -78,32 +63,36 @@ def validate_pin_node(state: JibuTaxState) -> Dict[str, Any]:
             "call_status": "IN_PROGRESS",
         }
 
-    # Case 2: Invalid PIN Syntax
-    if not KRA_PIN_REGEX.match(pin):
+    raw_pin = (sale.buyer_pin or "").strip().upper()
+
+    # Case 1: No Buyer PIN mentioned -> Standard Retail Consumer (B2C) Sale
+    if not raw_pin or raw_pin in ["NONE", "NULL", "WALK-IN", "RETAIL", "CONSUMER_RETAIL", "NO"]:
         return {
             "buyer_validation": BuyerValidationResult(
-                is_valid=False,
-                pin=pin,
-                error_message=f"PIN '{pin}' si sahihi. KRA PIN inapaswa kuanza na A au P, ikifuatiwa na nambari 9 na herufi moja."
+                is_valid=True,
+                pin="CONSUMER_RETAIL",
+                legal_name="Mteja wa Kawaida (Retail Consumer)",
+                trading_name="Walk-in Consumer",
+                vat_registered=False,
+                etims_onboarded=False,
+                error_message=None,
             ),
-            "retry_count": current_retry + 1,
-            "call_status": "NEEDS_CLARIFICATION",
+            "call_status": "IN_PROGRESS",
         }
 
-    # Case 3: Valid Format - Check Registry
-    if pin in KNOWN_TAXPAYERS:
-        taxpayer = KNOWN_TAXPAYERS[pin]
+    # Case 2: Any Spoken PIN or Number
+    if raw_pin in KNOWN_TAXPAYERS:
+        taxpayer = KNOWN_TAXPAYERS[raw_pin]
         legal_name = taxpayer["legal_name"]
         trading_name = taxpayer.get("trading_name")
     else:
-        # Realistic dynamic fallback for any validly structured KRA PIN
-        legal_name = f"ENTERPRISE ({pin}) LIMITED"
+        legal_name = f"ENTERPRISE ({raw_pin}) LIMITED"
         trading_name = legal_name
 
     return {
         "buyer_validation": BuyerValidationResult(
             is_valid=True,
-            pin=pin,
+            pin=raw_pin,
             legal_name=legal_name,
             trading_name=trading_name,
             vat_registered=True,

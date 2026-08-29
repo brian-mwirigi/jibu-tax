@@ -11,12 +11,13 @@ KRA_PIN_PATTERN = re.compile(
 
 class PinVerificationRequest(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra="ignore",
     )
 
     pin: str = Field(
-        min_length=11,
-        max_length=11,
+        default="CONSUMER_RETAIL",
+        min_length=1,
+        max_length=64,
     )
 
     @field_validator("pin", mode="before")
@@ -25,14 +26,9 @@ class PinVerificationRequest(BaseModel):
         cls,
         value: str,
     ) -> str:
-        normalized = value.strip().upper()
-
-        if not KRA_PIN_PATTERN.fullmatch(normalized):
-            raise ValueError(
-                "Invalid KRA PIN format"
-            )
-
-        return normalized
+        if not value:
+            return "CONSUMER_RETAIL"
+        return str(value).strip().upper()
 
 
 class TaxpayerResponse(BaseModel):

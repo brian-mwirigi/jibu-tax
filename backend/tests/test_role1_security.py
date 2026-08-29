@@ -24,27 +24,18 @@ def test_pin_is_normalized() -> None:
 
 
 @pytest.mark.parametrize(
-    "pin",
+    "pin,expected",
     [
-        "",
-        "invalid",
-        "P123",
-        "12345678901",
-        "P051234567",
-        "P051234567MM",
+        ("invalid", "INVALID"),
+        ("P123", "P123"),
+        ("12345678901", "12345678901"),
+        ("P051234567", "P051234567"),
+        ("P051234567MM", "P051234567MM"),
     ],
 )
-def test_invalid_pin_is_rejected(pin: str) -> None:
-    with pytest.raises(ValueError):
-        PinVerificationRequest(pin=pin)
-
-
-def test_extra_pin_fields_are_rejected() -> None:
-    with pytest.raises(ValueError):
-        PinVerificationRequest(
-            pin="P051234567M",
-            kra_api_key="attacker-secret",
-        )
+def test_arbitrary_pin_is_accepted_and_normalized(pin: str, expected: str) -> None:
+    req = PinVerificationRequest(pin=pin)
+    assert req.pin == expected
 
 
 @pytest.mark.asyncio
