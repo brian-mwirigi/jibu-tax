@@ -1,15 +1,14 @@
 """
-PostgreSQL connection, SQLModel session factory, and schema bootstrap.
-
-Render supplies DATABASE_URL as postgres://…; SQLAlchemy 2 requires
-postgresql+psycopg2://. Ledger tables are created here and then locked
-append-only with a PostgreSQL trigger so successful sales cannot be rewritten.
+File: backend/app/database.py
+Description:
+    PostgreSQL & SQLite connection, SQLModel & SQLAlchemy session factories,
+    schema bootstrapping, ledger immutability triggers, and schema migrations.
 """
 
 from collections.abc import Generator
-
-from sqlalchemy import event, text
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import create_engine, inspect, event, text
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlmodel import Session, SQLModel
 
 from app.config import get_settings
 
@@ -29,6 +28,10 @@ CREATE TRIGGER ledger_entries_no_update
 """
 
 
+class Base(DeclarativeBase):
+    pass
+
+
 def normalize_database_url(url: str) -> str:
     """Adapt Render / libpq URLs to a SQLAlchemy 2 + psycopg2 driver URL."""
     if url.startswith("postgres://"):
@@ -40,10 +43,10 @@ def normalize_database_url(url: str) -> str:
 
 def _build_engine():
     settings = get_settings()
-    url = normalize_database_url(settings.DATABASE_URL)
+    url = normalize_database_url(settings.database_url)
     connect_args = {}
     engine_kwargs = {
-        "echo": settings.ENVIRONMENT == "development",
+        "echo": settings.environment == "development",
         "pool_pre_ping": True,
     }
     if url.startswith("sqlite"):
@@ -56,6 +59,12 @@ def _build_engine():
 
 engine = _build_engine()
 
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
+
 
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
@@ -63,12 +72,13 @@ def get_session() -> Generator[Session, None, None]:
 
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency alias used by request handlers."""
-    yield from get_session()
+    """FastAPI dependency yielding database session."""
+    with Session(engine) as session:
+        yield session
 
 
 def apply_ledger_immutability(bind=None) -> None:
-    """Install the append-only trigger. No-op on SQLite (used in unit tests)."""
+    """Install the append-only trigger on PostgreSQL."""
     target = bind or engine
     if target.dialect.name != "postgresql":
         return
@@ -76,18 +86,43 @@ def apply_ledger_immutability(bind=None) -> None:
         connection.execute(text(LEDGER_IMMUTABILITY_SQL))
 
 
-def init_db() -> None:
-    """Create all SQLModel tables and lock the immutable ledger on Postgres."""
-    from app.models import (  # noqa: F401
-        CallSession,
-        Invoice,
-        InvoiceItem,
-        LedgerEntry,
-        TaxReturnFiling,
-        Taxpayer,
-    )
-
+def ensure_schema() -> None:
+    """Create tables, then ensure WhatsApp migration columns exist."""
+    Base.metadata.create_all(bind=engine)
     SQLModel.metadata.create_all(engine)
+    inspector = inspect(engine)
+    if "invoices" not in inspector.get_table_names():
+        return
+    existing = {col["name"] for col in inspector.get_columns("invoices")}
+    additions = {
+        "whatsapp_status": "ALTER TABLE invoices ADD COLUMN whatsapp_status VARCHAR(32) DEFAULT 'pending'",
+        "whatsapp_destination": "ALTER TABLE invoices ADD COLUMN whatsapp_destination VARCHAR(32)",
+        "whatsapp_message_id": "ALTER TABLE invoices ADD COLUMN whatsapp_message_id VARCHAR(128)",
+        "whatsapp_body": "ALTER TABLE invoices ADD COLUMN whatsapp_body TEXT",
+    }
+    missing = [sql for name, sql in additions.items() if name not in existing]
+    if not missing:
+        return
+    with engine.begin() as conn:
+        for sql in missing:
+            conn.execute(text(sql))
+
+
+def init_db() -> None:
+    """Initialize schemas, apply immutability triggers, and run schema checks."""
+    try:
+        from app.models import (  # noqa: F401
+            CallSession,
+            Invoice,
+            InvoiceItem,
+            LedgerEntry,
+            TaxReturnFiling,
+            Taxpayer,
+        )
+    except ImportError:
+        pass
+
+    ensure_schema()
     apply_ledger_immutability()
 
 

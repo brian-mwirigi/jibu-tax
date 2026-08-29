@@ -1,4 +1,4 @@
-"""Database models package. Import side effects register tables on SQLModel.metadata."""
+"""Database models package. Import side effects register tables on metadata."""
 
 from app.models.call_session import CallSession
 from app.models.invoice import Invoice, InvoiceItem
