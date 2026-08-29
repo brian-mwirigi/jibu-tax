@@ -13,8 +13,16 @@
 
 <br/>
 
-> **No smartphone. No internet connection. No accounting degree.**  
+> 📱 **No smartphone. No internet connection. No accounting degree.**  
 > **Just dial, speak your trade in Sheng, Swahili, or English, and get an instant official KRA QR-stamped invoice sent straight to your WhatsApp and SMS.**
+
+---
+
+### 🔥 PEAK AUTOMATION HIGHLIGHT: Autonomous 1.5% Turnover Tax (TOT) & NIL Defense
+
+> 🛡️ **Zero-Touch Month-End Tax Filing on Autopilot:**  
+> Under Kenya's Income Tax Act (Section 12C), informal traders face **KES 2,000 monthly late-filing fines** if they miss their returns.  
+> **JibuTax eliminates this entirely:** On the 18th of every month, our autonomous Celery cron scans the immutable ledger, aggregates all sales, and submits the official 1.5% Turnover Tax return to KRA with an instant M-Pesa PRN payment slip. If the trader had zero sales, **JibuTax auto-files a legal NIL return with Obligation Code `7`** — 100% autonomously protecting informal traders from government penalties without them lifting a finger!
 
 ---
 
@@ -27,7 +35,7 @@ Under Kenya's **Finance Act 2023 Section 16**, the Kenya Revenue Authority (KRA)
 This single law created an existential crisis across East Africa:
 * **The Squeeze on 16 Million Informal Traders:** Supermarkets, safari hotels, restaurants, and construction firms can no longer buy produce from unregistered *mama mbogas*, smallholder farmers, or *jua kali* artisans without facing punishing tax penalties.
 * **The Digital Divide:** Existing eTIMS solutions (eTIMS Client, Online Portal, VSCU) require laptops, smartphones, stable 4G broadband, manual HS-code lookups, and navigating complex 11-digit alphanumeric tax PINs.
-* **The Penalty:** Over 80% of Kenya's workforce operates informally. Millions of livelihoods are locked out of corporate supply chains simply because they lack an accessible way to generate a receipt.
+* **The Penalty Trap:** Missing a monthly filing triggers an immediate KES 2,000 fine per month per trader. Millions of informal livelihoods risk financial ruin or exclusion from corporate supply chains simply because they lack an accessible way to generate a receipt and file their taxes.
 
 ---
 
@@ -39,6 +47,8 @@ This single law created an existential crisis across East Africa:
 "Nimeuzia Safari Hotel magunia hamsini ya mahindi, gunia ni mia nane."
                                  ⬇️
   [ Instant KRA-Signed Invoice + WhatsApp QR Code Dispatched in 400ms ]
+                                 ⬇️
+  [ Auto-Aggregated into 1.5% Turnover Tax & NIL Defense on the 18th ]
 ```
 
 ### 🌟 Why JibuTax Wins (Our Unfair Advantage)
@@ -51,7 +61,7 @@ This single law created an existential crisis across East Africa:
 | **Trader Identity** | Type 11-character alphanumeric PIN every time | **Phone-to-PIN Biometric Linking** — detected via Caller ID |
 | **Turnaround Time** | 5 – 10 minutes of manual data entry | **< 500 milliseconds** end-to-end latency |
 | **Receipt Delivery** | Must print physical paper thermal receipt | **Instant WhatsApp QR image + SMS text link** |
-| **Month-End Compliance** | Manual calculation and penalty risk | **Automated 1.5% Turnover Tax (TOT) & NIL return filing** |
+| **Month-End Compliance** | Manual calculations + risk of KES 2k penalty | **Autonomous 1.5% TOT & NIL Return Filing on the 18th** |
 
 ---
 
@@ -97,25 +107,33 @@ sequenceDiagram
     end
 
     Buyer->>OSCU: Scans QR code -> Instant Verification on KRA Gateway
+
+    Note over DB: On the 18th of Every Month (Autonomous Background Cron)
+    DB->>DB: Scan previous month sales -> Auto-File 1.5% TOT / NIL Return with KRA
 ```
 
 ---
 
 ## 💎 Core Feature Breakdown
 
-### 1. 🧠 Autonomous Voice Intelligence (Role 4)
+### 1. 📈 Autonomous Month-End Tax Filing & NIL Defense (Role 5 - PEAK FEATURE)
+- **1.5% Turnover Tax (TOT) Calculation:** Section 12C final tax engine auto-sums all ledger receipts and computes the exact 1.5% monthly obligation.
+- **Instant M-Pesa PRN Generation:** Generates official Payment Registration Numbers (PRNs) directly from KRA for friction-free mobile money tax settlement.
+- **Automated NIL Return Filing:** If a trader has zero sales in a calendar month, JibuTax automatically files a legal NIL return with obligation code `7`, preventing KRA late-filing fines of KES 2,000/month.
+
+### 2. 🧠 Autonomous Voice Intelligence (Role 4)
 - **LangGraph Multi-Agent State Machine:** Implements a strict DAG (`START` $\to$ `extract_sale` $\to$ `validate_pin` $\to$ `calculate_tax` $\to$ `END`).
 - **Multilingual Entity Extraction:** Powered by Google Gemini Flash-Lite. Flawlessly understands Kenyan street slang, Swahili dialects, and mixed Sheng codeswitching.
 - **Multi-Turn MemorySaver:** Handles conversational context and interruptions across calls using `caller_phone` as the persistent thread ID.
 
-### 2. 📱 Phone-to-PIN Identity & Zero-Friction Sales
+### 3. 📱 Phone-to-PIN Identity & Zero-Friction Sales
 - **One-Time Biometric Onboarding:** On their first call, traders register their KRA PIN once. It is permanently bound to their MSISDN in PostgreSQL.
 - **Subsequent Calls (Zero PIN Recital):** The caller ID automatically identifies the seller and attaches their official KRA PIN to the invoice.
 - **B2B vs. Retail Consumer (B2C) Intelligence:**
   - **B2B Transactions:** Trader mentions the company name or PIN (*"Safari Hotel", "P051234567M"*); JibuTax validates it against the registry in real-time.
   - **Retail Consumer (B2C) Sales:** Everyday walk-in customer sales pass immediately without a buyer PIN as `CONSUMER_RETAIL`.
 
-### 3. ⚖️ 100% Deterministic Tax Engine (Zero AI Math Hallucinations)
+### 4. ⚖️ 100% Deterministic Tax Engine (Zero AI Math Hallucinations)
 - **No AI in Calculations:** LLMs are strictly forbidden from performing arithmetic. All sums, taxes, and classifications are computed by hardcoded, audited Python logic.
 - **VAT Act Compliance:**
   - **Standard Rate (16%):** Manufactured goods, cement, hardware, commercial services.
@@ -123,19 +141,15 @@ sequenceDiagram
   - **Second Schedule (Zero-Rated):** Fertilizers, seeds, exported goods.
   - **Fuel Tax (8%):** Diesel, petrol, and energy inputs.
 
-### 4. 🔐 Cryptographic OSCU Simulator & Tamper-Proof Ledger (Roles 1, 3 & 5)
+### 5. 🔐 Cryptographic OSCU Simulator & Tamper-Proof Ledger (Roles 1, 3 & 5)
 - **KRA OSCU Control Codes:** Every electronic invoice is signed using HMAC-SHA256 with device-level keys (`OSCU-KE-NBO-0042`) generating grouped hex signatures (`XXXX-XXXX-XXXX-XXXX`).
 - **Verifiable KRA QR Codes:** Auto-generates standard 2D barcodes embedding canonical payload verification links (`https://sbx.kra.go.ke/verify?cu=...`).
 - **Cryptographic Hash Chain:** Every sale is bound to the previous ledger entry via SHA-256 hash chaining (`prev_hash` $\to$ `entry_hash`).
 - **PostgreSQL Append-Only Trigger:** Database-level trigger `prevent_ledger_mutation()` rejects all `UPDATE` and `DELETE` queries.
 
-### 5. 📲 Omnichannel Receipt Dispatch (Role 3)
+### 6. 📲 Omnichannel Receipt Dispatch (Role 3)
 - **Meta WhatsApp Cloud API:** Dispatches the high-resolution cryptographic QR code image and complete line-item breakdown directly to the trader's WhatsApp.
 - **SMS Fallback (Africa's Talking):** Instantly sends a short SMS receipt with a short link to the invoice for basic feature phone users.
-
-### 6. 📈 Automated Month-End Tax Filing (Role 5)
-- **Automated Turnover Tax (TOT):** Runs on the 18th of every month via Celery cron, calculating 1.5% gross sales tax and submitting payment registration to KRA.
-- **Automated NIL Returns:** If a trader has zero sales in a calendar month, JibuTax automatically files a legal NIL return with obligation code `7`, preventing KRA late-filing fines of KES 2,000/month.
 
 ---
 
@@ -158,7 +172,7 @@ backend/tests/test_tax_engine.py ............ PASSED [ 76%]  # Deterministic VAT
 backend/tests/test_taxpayer_identity.py ..... PASSED [ 81%]  # MSISDN Phone-to-PIN Onboarding
 backend/tests/test_whatsapp_dispatcher.py ... PASSED [100%]  # WhatsApp QR Media Delivery
 
-======================= 65 passed, 1 warning in 18.21s ========================
+======================= 65 passed, 1 warning in 15.47s ========================
 ```
 
 ---
