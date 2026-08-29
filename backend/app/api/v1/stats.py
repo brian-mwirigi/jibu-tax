@@ -9,9 +9,9 @@ Description:
 
 from collections import deque
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 router = APIRouter(tags=["Telemetry & Stats"])
 
@@ -40,15 +40,18 @@ def record_telemetry_event(node: str, message: str, level: str = "info") -> None
     })
 
 
-# Initial welcome event
-record_telemetry_event("SYSTEM", "Telemetry stream initialized. Ready for ElevenLabs voice calls.", "success")
-
-
 @router.get("/telemetry", response_model=List[TelemetryEvent])
 def get_live_telemetry_stream(limit: int = 50):
     """
     Fetch the latest live telemetry events for the dashboard terminal.
-    Enables remote monitoring of phone calls made via the ElevenLabs Web Dialer.
     """
     logs_list = list(_TELEMETRY_LOGS)
     return logs_list[-limit:]
+
+
+@router.delete("/telemetry")
+def clear_telemetry_logs():
+    """Clear all telemetry logs for a fresh live demo run."""
+    _TELEMETRY_LOGS.clear()
+    record_telemetry_event("SYSTEM", "Live telemetry stream connected. Speak into microphone...", "success")
+    return {"ok": True, "message": "Telemetry logs cleared"}
