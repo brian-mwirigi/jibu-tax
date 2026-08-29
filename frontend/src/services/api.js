@@ -16,7 +16,8 @@
  *       * /api/v1/filings & filings/month-end (Turnover Tax & NIL Filing Engine)
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const rawApiBase = (import.meta.env.VITE_API_URL || '').trim();
+const API_BASE = rawApiBase.replace(/\/+$/, '');
 
 async function handleResponse(res) {
   if (!res.ok) {
