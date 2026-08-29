@@ -23,6 +23,7 @@ from app.api.v1 import (
     ledger,
     filings,
     taxpayers,
+    stats,
 )
 
 api_router = APIRouter()
@@ -35,3 +36,4 @@ api_router.include_router(webhooks.router, prefix="/tools", tags=["Tools"])
 api_router.include_router(ledger.router, prefix="/ledger", tags=["Ledger"])
 api_router.include_router(filings.router, prefix="/filings", tags=["Filings"])
 api_router.include_router(taxpayers.router, prefix="/taxpayers", tags=["Taxpayers"])
+api_router.include_router(stats.router, prefix="/stats", tags=["Stats"])

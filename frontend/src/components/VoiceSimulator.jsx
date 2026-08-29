@@ -118,29 +118,60 @@ export default function VoiceSimulator({ onInvoiceGenerated, onViewReceipt }) {
     convEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationHistory]);
 
-  // Poll for latest invoice created by backend during the live call
+  // Continuously stream live backend telemetry logs into terminal
   useEffect(() => {
-    let interval;
-    if (isCallActive) {
-      interval = setInterval(async () => {
-        try {
-          const invoices = await api.getInvoices();
-          if (Array.isArray(invoices) && invoices.length > 0) {
-            const newest = invoices[0];
-            if (!latestInvoice || newest.invoice_number !== latestInvoice.invoice_number) {
-              setLatestInvoice(newest);
-              setActiveStage(5);
-              addLog('LEDGER_SYNC', `Real eTIMS Invoice #${newest.invoice_number} signed & saved to PostgreSQL!`, 'success');
-              if (onInvoiceGenerated) onInvoiceGenerated(newest);
-            }
-          }
-        } catch {
-          // Silent polling error handling
+    const fetchTelemetry = async () => {
+      try {
+        const stream = await api.getTelemetryStream(40);
+        if (Array.isArray(stream) && stream.length > 0) {
+          setLogs((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const newEvents = stream.filter((e) => !existingIds.has(e.id)).map((e) => ({
+              id: e.id,
+              timestamp: e.timestamp,
+              node: e.node,
+              message: e.message,
+              type: e.level === 'error' ? 'error' : e.level === 'success' ? 'success' : 'info',
+            }));
+            if (newEvents.length === 0) return prev;
+            return [...prev, ...newEvents].slice(-100);
+          });
         }
-      }, 2000);
-    }
+      } catch {
+        // Silent polling handling
+      }
+    };
+
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 1500);
     return () => clearInterval(interval);
-  }, [isCallActive, latestInvoice, addLog, onInvoiceGenerated]);
+  }, []);
+
+  // Poll for latest invoice created by backend during phone or web calls
+  useEffect(() => {
+    const checkNewInvoices = async () => {
+      try {
+        const invoices = await api.getInvoices();
+        if (Array.isArray(invoices) && invoices.length > 0) {
+          const newest = invoices[0];
+          setLatestInvoice((prev) => {
+            if (!prev || newest.invoice_number !== prev.invoice_number) {
+              setActiveStage(5);
+              if (onInvoiceGenerated) onInvoiceGenerated(newest);
+              return newest;
+            }
+            return prev;
+          });
+        }
+      } catch {
+        // Silent polling handling
+      }
+    };
+
+    checkNewInvoices();
+    const interval = setInterval(checkNewInvoices, 2000);
+    return () => clearInterval(interval);
+  }, [onInvoiceGenerated]);
 
   const handleStartCall = async () => {
     try {

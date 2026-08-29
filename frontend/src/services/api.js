@@ -103,6 +103,15 @@ export const api = {
   },
 
   /**
+   * Fetch Live Telemetry Log Stream
+   * GET /api/v1/stats/telemetry
+   */
+  async getTelemetryStream(limit = 50) {
+    const res = await fetch(`${API_BASE}/api/v1/stats/telemetry?limit=${limit}`);
+    return await handleResponse(res);
+  },
+
+  /**
    * Synthesize Spoken Audio with ElevenLabs
    * POST /api/v1/agent/speak
    */

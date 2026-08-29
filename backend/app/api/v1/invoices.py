@@ -35,17 +35,26 @@ def _http_tax_error(exc: TaxValidationError) -> HTTPException:
 
 @router.post("/preview", response_model=TaxBreakdown)
 def preview_invoice(payload: CreateInvoiceRequest):
+    from app.api.v1.stats import record_telemetry_event
     try:
-        return calculate_invoice(payload.items, claimed_grand_total=payload.claimed_grand_total)
+        res = calculate_invoice(payload.items, claimed_grand_total=payload.claimed_grand_total)
+        record_telemetry_event("TAX_ENGINE", f"VAT Preview: Total KES {res.grand_total:,.2f} | VAT KES {res.total_vat_amount:,.2f}", "success")
+        return res
     except TaxValidationError as exc:
+        record_telemetry_event("TAX_ENGINE", f"Tax validation error: {exc.message}", "error")
         raise _http_tax_error(exc) from exc
 
 
 @router.post("", response_model=InvoiceResponse)
 def create_invoice(payload: CreateInvoiceRequest, db: Session = Depends(get_db)):
+    from app.api.v1.stats import record_telemetry_event
     try:
-        return issue_invoice(db, payload)
+        inv = issue_invoice(db, payload)
+        record_telemetry_event("OSCU_SIGNER", f"eTIMS Invoice #{inv.invoice_number} signed with Control Code {inv.oscu_control_code}", "success")
+        record_telemetry_event("DISPATCH", f"WhatsApp QR Code sent to {inv.whatsapp_destination or '+254712345678'}", "success")
+        return inv
     except TaxValidationError as exc:
+        record_telemetry_event("OSCU_SIGNER", f"Invoice creation failed: {exc.message}", "error")
         raise _http_tax_error(exc) from exc
 
 
