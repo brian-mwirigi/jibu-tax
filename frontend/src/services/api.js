@@ -103,6 +103,23 @@ export const api = {
   },
 
   /**
+   * Synthesize Spoken Audio with ElevenLabs
+   * POST /api/v1/agent/speak
+   */
+  async synthesizeSpeech(text) {
+    const res = await fetch(`${API_BASE}/api/v1/agent/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      throw new Error(`TTS failed with status ${res.status}`);
+    }
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
+  /**
    * Deterministic Tax Math Preview
    * POST /api/v1/invoices/preview
    */

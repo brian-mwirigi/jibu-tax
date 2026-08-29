@@ -155,3 +155,50 @@ def get_agent_checkpoint_state(caller_phone: str):
             status_code=500,
             detail="Failed to inspect checkpoint",
         )
+
+
+class SpeakRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=5000)
+    voice_id: Optional[str] = Field(default="21m00Tcm4TlvDq8ikWAM")
+
+
+@router.post("/speak")
+def synthesize_speech(payload: SpeakRequest):
+    """
+    Synthesize high-quality natural Swahili/English speech using ElevenLabs API.
+    Streams back MP3 audio directly to the frontend.
+    """
+    from fastapi.responses import Response
+    import requests
+    from app.config import get_settings
+
+    settings = get_settings()
+    eleven_key = settings.ELEVENLABS_API_KEY
+    if not eleven_key:
+        raise HTTPException(status_code=400, detail="ElevenLabs API key not configured")
+
+    voice_id = payload.voice_id or "21m00Tcm4TlvDq8ikWAM"
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        "xi-api-key": eleven_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+    body = {
+        "text": payload.text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+        },
+    }
+
+    try:
+        resp = requests.post(url, json=body, headers=headers, timeout=15)
+        if resp.status_code != 200:
+            logger.error("ElevenLabs TTS error (%d): %s", resp.status_code, resp.text)
+            raise HTTPException(status_code=resp.status_code, detail=f"ElevenLabs TTS failed: {resp.text}")
+        return Response(content=resp.content, media_type="audio/mpeg")
+    except requests.RequestException as e:
+        logger.exception("ElevenLabs request failed")
+        raise HTTPException(status_code=502, detail=f"ElevenLabs connection failed: {str(e)}")

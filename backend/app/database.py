@@ -108,6 +108,32 @@ def ensure_schema() -> None:
             conn.execute(text(sql))
 
 
+def seed_default_taxpayers() -> None:
+    """Seed demo taxpayers so demo numbers are pre-enrolled with trader PIN."""
+    try:
+        from app.models.taxpayer import Taxpayer
+        from sqlmodel import Session, select
+        with Session(engine) as session:
+            demo_accounts = [
+                ("+254712345678", "A012345678W", "MARY WANJIKU MAMA MBOGA", "sw"),
+                ("+254722998877", "A012345678W", "OCHIENG AGROVET SUPPLIES", "sw"),
+                ("+254733112233", "A012345678W", "JIBUTAX NAIROBI JUA KALI", "sheng"),
+            ]
+            for phone, pin, name, lang in demo_accounts:
+                existing = session.exec(select(Taxpayer).where(Taxpayer.phone_number == phone)).first()
+                if not existing:
+                    session.add(Taxpayer(
+                        phone_number=phone,
+                        kra_pin=pin,
+                        legal_name=name,
+                        preferred_language=lang,
+                        is_verified=True,
+                    ))
+            session.commit()
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Default taxpayer seeding skipped: %s", exc)
+
+
 def init_db() -> None:
     """Initialize schemas, apply immutability triggers, and run schema checks."""
     try:
@@ -124,6 +150,7 @@ def init_db() -> None:
 
     ensure_schema()
     apply_ledger_immutability()
+    seed_default_taxpayers()
 
 
 @event.listens_for(engine, "connect")

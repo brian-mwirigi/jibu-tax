@@ -24,39 +24,20 @@ export default function App() {
   const [currentInvoice, setCurrentInvoice] = useState(null);
 
   const handleInvoiceGenerated = (result) => {
-    if (result?.tax_breakdown) {
-      const invNumber = `INV-2026-0042`;
-      const controlCode = `KRA-9F4A-32BC-7E11`;
-      const inv = {
-        invoice_number: invNumber,
-        buyer_name: result.sale?.buyer_name || 'SAFARI HOTEL & RESORT LTD',
-        buyer_pin: result.sale?.buyer_pin || 'P051234567M',
+    if (result?.invoice_number) {
+      setCurrentInvoice(result);
+    } else if (result?.tax_breakdown) {
+      setCurrentInvoice({
+        ...result,
+        invoice_number: result.invoice_number || 'INV-PENDING',
+        buyer_name: result.buyer_validation?.legal_name || result.sale?.buyer_name || 'Retail Customer',
+        buyer_pin: result.sale?.buyer_pin || 'CONSUMER_RETAIL',
         trader_name: result.trader_name || 'MARY WANJIKU MAMA MBOGA',
         trader_pin: result.trader_pin || 'A012345678W',
         grand_total: result.tax_breakdown.grand_total,
         net_total: result.tax_breakdown.net_amount,
         vat_total: result.tax_breakdown.vat_amount,
-        oscu_control_code: controlCode,
-        oscu_device_id: 'OSCU-KE-NBO-0042',
-        qr_payload: `https://sbx.kra.go.ke/verify?cu=OSCU-KE-NBO-0042&inv=${invNumber}&tot=${result.tax_breakdown.grand_total.toFixed(2)}&sig=9F4A32BC7E11`,
-        sms_status: 'SENT',
-        whatsapp_status: 'DELIVERED',
-        issued_at: new Date().toISOString(),
-        items: [
-          {
-            item_name: result.sale?.item_description || 'Mahindi (Bags)',
-            quantity: result.sale?.quantity || 50,
-            unit_price: result.sale?.unit_price || 800,
-            tax_rate: result.tax_breakdown.tax_rate,
-            tax_category: result.tax_breakdown.tax_category,
-            tax_schedule: result.tax_breakdown.tax_schedule,
-            total_amount: result.tax_breakdown.grand_total,
-            tax_amount: result.tax_breakdown.vat_amount,
-            hs_code: result.tax_breakdown.hs_code || '1005.90.00',
-          },
-        ],
-      };
-      setCurrentInvoice(inv);
+      });
     }
   };
 
