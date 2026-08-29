@@ -36,11 +36,21 @@ export default function InvoiceList({ onSelectInvoice }) {
 
   useEffect(() => {
     loadInvoices();
+    const interval = setInterval(() => {
+      loadInvoices();
+    }, 2500);
+    return () => clearInterval(interval);
   }, []);
 
   const loadInvoices = async () => {
-    const data = await api.getInvoices();
-    setInvoices(data);
+    try {
+      const data = await api.getInvoices();
+      if (Array.isArray(data)) {
+        setInvoices(data);
+      }
+    } catch (err) {
+      console.error('Auto-sync error:', err);
+    }
   };
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -84,7 +94,10 @@ export default function InvoiceList({ onSelectInvoice }) {
                 ROLE 5 IMMUTABLE LEDGER &amp; FILING ENGINE
               </span>
               <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-cyan-400 font-mono">PostgreSQL Append-Only Trigger</span>
+              <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Auto-Sync (2.5s)
+              </span>
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Historical eTIMS Audit Ledger &amp; 1.5% TOT Engine</span>
@@ -106,7 +119,7 @@ export default function InvoiceList({ onSelectInvoice }) {
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            <span>Simulate 18th Month-End Cron</span>
+            <span>Execute 18th Month-End Defense</span>
           </button>
         </div>
       </div>
